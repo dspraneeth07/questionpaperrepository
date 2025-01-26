@@ -9,7 +9,118 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      branches: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      exam_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      papers: {
+        Row: {
+          branch_id: number
+          created_at: string
+          exam_type_id: number
+          file_url: string
+          id: number
+          semester_id: number
+          year: number
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          exam_type_id: number
+          file_url: string
+          id?: number
+          semester_id: number
+          year: number
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          exam_type_id?: number
+          file_url?: string
+          id?: number
+          semester_id?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "papers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "papers_exam_type_id_fkey"
+            columns: ["exam_type_id"]
+            isOneToOne: false
+            referencedRelation: "exam_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "papers_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semesters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      semesters: {
+        Row: {
+          created_at: string
+          id: number
+          number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          number: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          number?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
