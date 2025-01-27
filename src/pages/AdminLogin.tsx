@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -17,19 +16,8 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select()
-        .eq('email', email)
-        .single();
-
-      if (error || !data) {
-        throw new Error('Invalid credentials');
-      }
-
-      // In a real application, you should properly hash and compare passwords
-      // This is just for demonstration
-      if (data.password_hash === password) {
+      // Check hardcoded credentials
+      if (username === "vcepaper" && password === "vasavipyqp") {
         localStorage.setItem('adminAuthenticated', 'true');
         navigate('/admin/dashboard');
       } else {
@@ -59,14 +47,14 @@ const AdminLogin = () => {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
               </label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="mt-1"
               />

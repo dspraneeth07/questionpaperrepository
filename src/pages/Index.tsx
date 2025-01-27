@@ -1,10 +1,11 @@
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { data: branches, isLoading } = useQuery({
@@ -24,7 +25,15 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <Breadcrumb items={[{ label: "Home", path: "/" }]} />
+        <div className="flex justify-between items-center mb-6">
+          <Breadcrumb items={[{ label: "Home", path: "/" }]} />
+          <Link to="/admin/login">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Admin Login
+            </Button>
+          </Link>
+        </div>
         
         <h2 className="text-2xl font-bold text-primary mb-6">Select Branch</h2>
         
