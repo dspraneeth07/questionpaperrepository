@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import BranchYears from "./pages/BranchYears";
 import BranchSemesters from "./pages/BranchSemesters";
+import ExamTypes from "./pages/ExamTypes";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/branch/:branchCode" element={<BranchYears />} />
           <Route path="/branch/:branchCode/year/:year" element={<BranchSemesters />} />
+          <Route path="/branch/:branchCode/year/:year/semester/:semester" element={<ExamTypes />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
