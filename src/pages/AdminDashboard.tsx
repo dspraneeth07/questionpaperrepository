@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Table,
   TableBody,
@@ -19,9 +23,17 @@ import {
   ResponsiveContainer 
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stats, setStats] = useState({
     totalPapers: 0,
     totalDownloads: 0,
@@ -30,6 +42,16 @@ const AdminDashboard = () => {
   });
   const [papers, setPapers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [uploadData, setUploadData] = useState({
+    branch_id: "",
+    semester_id: "",
+    exam_type_id: "",
+    year: new Date().getFullYear(),
+  });
+  const [branches, setBranches] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [examTypes, setExamTypes] = useState([]);
+  const [file, setFile] = useState(null);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('adminAuthenticated');
@@ -37,7 +59,29 @@ const AdminDashboard = () => {
       navigate('/admin/login');
     }
     fetchDashboardData();
+    fetchMetadata();
   }, [navigate]);
+
+  const fetchMetadata = async () => {
+    try {
+      const [branchesRes, semestersRes, examTypesRes] = await Promise.all([
+        supabase.from('branches').select('*'),
+        supabase.from('semesters').select('*'),
+        supabase.from('exam_types').select('*')
+      ]);
+
+      setBranches(branchesRes.data || []);
+      setSemesters(semestersRes.data || []);
+      setExamTypes(examTypesRes.data || []);
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch metadata",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -57,17 +101,89 @@ const AdminDashboard = () => {
         `)
         .order('created_at', { ascending: false });
 
-      // Set the dashboard data
       setStats({
         totalPapers: papersCount || 0,
-        totalDownloads: 0, // This will be implemented when we add download tracking
-        branchWiseDownloads: [], // This will be implemented when we add download tracking
-        monthlyActivity: [] // This will be implemented when we add activity tracking
+        totalDownloads: 0,
+        branchWiseDownloads: [],
+        monthlyActivity: []
       });
 
       setPapers(papersData || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    e.preventDefault();
+    
+    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.exam_type_id) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Upload file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('question-papers')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('question-papers')
+        .getPublicUrl(fileName);
+
+      // Save paper record in database
+      const { error: dbError } = await supabase
+        .from('papers')
+        .insert({
+          ...uploadData,
+          file_url: publicUrl,
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Question paper uploaded successfully",
+      });
+
+      // Refresh dashboard data
+      fetchDashboardData();
+      
+      // Reset form
+      setFile(null);
+      setUploadData({
+        branch_id: "",
+        semester_id: "",
+        exam_type_id: "",
+        year: new Date().getFullYear(),
+      });
+      
+    } catch (error) {
+      console.error('Error uploading paper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload question paper",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +197,98 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+
+        {/* Upload Section */}
+        <Card className="p-6 mb-8">
+          <h3 className="text-lg font-medium mb-4">Upload Question Paper</h3>
+          <form onSubmit={handleFileUpload} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="branch">Branch</Label>
+                <Select
+                  value={uploadData.branch_id}
+                  onValueChange={(value) => setUploadData(prev => ({ ...prev, branch_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="semester">Semester</Label>
+                <Select
+                  value={uploadData.semester_id}
+                  onValueChange={(value) => setUploadData(prev => ({ ...prev, semester_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {semesters.map((semester) => (
+                      <SelectItem key={semester.id} value={semester.id.toString()}>
+                        {semester.number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="examType">Exam Type</Label>
+                <Select
+                  value={uploadData.exam_type_id}
+                  onValueChange={(value) => setUploadData(prev => ({ ...prev, exam_type_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Exam Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {examTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={uploadData.year}
+                  onChange={(e) => setUploadData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                  min={2000}
+                  max={new Date().getFullYear()}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="file">Question Paper (PDF)</Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setFile(e.target.files?.[0])}
+                required
+              />
+            </div>
+
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Uploading..." : "Upload Question Paper"}
+            </Button>
+          </form>
+        </Card>
 
         {/* Statistics Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
