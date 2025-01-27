@@ -2,12 +2,15 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
 import { Calendar, ChevronRight } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const BranchYears = () => {
   const { branchCode } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   const { data: branch } = useQuery({
     queryKey: ['branch', branchCode],
@@ -16,9 +19,28 @@ const BranchYears = () => {
         .from('branches')
         .select('*')
         .eq('code', branchCode)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch branch details",
+        });
+        navigate('/');
+        throw error;
+      }
+
+      if (!data) {
+        toast({
+          variant: "destructive",
+          title: "Branch not found",
+          description: "The requested branch does not exist",
+        });
+        navigate('/');
+        return null;
+      }
+
       return data;
     },
   });
