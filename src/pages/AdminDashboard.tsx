@@ -51,7 +51,7 @@ const AdminDashboard = () => {
   const [branches, setBranches] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [examTypes, setExamTypes] = useState([]);
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('adminAuthenticated');
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.exam_type_id) {
@@ -139,7 +139,8 @@ const AdminDashboard = () => {
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+
+      const { data: uploadResult, error: uploadError } = await supabase.storage
         .from('question-papers')
         .upload(fileName, file);
 
@@ -154,8 +155,11 @@ const AdminDashboard = () => {
       const { error: dbError } = await supabase
         .from('papers')
         .insert({
-          ...uploadData,
-          file_url: publicUrl,
+          branch_id: parseInt(uploadData.branch_id),
+          semester_id: parseInt(uploadData.semester_id),
+          exam_type_id: parseInt(uploadData.exam_type_id),
+          year: uploadData.year,
+          file_url: publicUrl
         });
 
       if (dbError) throw dbError;
@@ -279,7 +283,7 @@ const AdminDashboard = () => {
                 id="file"
                 type="file"
                 accept=".pdf"
-                onChange={(e) => setFile(e.target.files?.[0])}
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
                 required
               />
             </div>
