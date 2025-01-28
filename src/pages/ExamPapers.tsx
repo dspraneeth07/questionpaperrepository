@@ -73,7 +73,7 @@ const ExamPapers = () => {
       const [branchResult, examTypeResult, semesterResult] = await Promise.all([
         supabase.from('branches').select('id').eq('code', branchCode).single(),
         supabase.from('exam_types').select('id').eq('code', examType).single(),
-        supabase.from('semesters').select('id').eq('number', semester).single()
+        supabase.from('semesters').select('id').eq('number', parseInt(semester || '0', 10)).single()
       ]);
 
       if (!branchResult.data || !examTypeResult.data || !semesterResult.data) {
@@ -91,7 +91,7 @@ const ExamPapers = () => {
         .eq('branch_id', branchResult.data.id)
         .eq('exam_type_id', examTypeResult.data.id)
         .eq('semester_id', semesterResult.data.id)
-        .eq('year', year);
+        .eq('year', parseInt(year || '0', 10));
       
       if (error) {
         toast({
