@@ -318,15 +318,24 @@ const AdminDashboard = () => {
 
       if (fetchError) throw fetchError;
 
-      // Extract filename from the URL
-      const fileName = paper.file_url.split('/').pop();
+      // Extract filename from the URL by getting everything after the last '/'
+      const filePathMatch = paper.file_url.match(/question-papers\/(.+)$/);
+      if (!filePathMatch) {
+        throw new Error('Invalid file path format');
+      }
+      const filePath = filePathMatch[1];
+
+      console.log('Attempting to delete file:', filePath); // Debug log
 
       // Delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('question-papers')
-        .remove([fileName]);
+        .remove([filePath]);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.error('Storage deletion error:', storageError); // Debug log
+        throw storageError;
+      }
 
       // Delete the paper record from the database
       const { error: deleteError } = await supabase
@@ -334,14 +343,17 @@ const AdminDashboard = () => {
         .delete()
         .eq('id', paperId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Database deletion error:', deleteError); // Debug log
+        throw deleteError;
+      }
 
       toast({
         title: "Success",
         description: "Question paper deleted successfully",
       });
 
-      fetchDashboardData();
+      fetchDashboardData(); // Refresh the list after deletion
     } catch (error) {
       console.error('Error deleting paper:', error);
       toast({
