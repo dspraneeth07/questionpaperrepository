@@ -69,14 +69,29 @@ const ExamPapers = () => {
   const { data: papers, isLoading } = useQuery({
     queryKey: ['papers', branchCode, year, semester, examType],
     queryFn: async () => {
-      console.log('Fetching papers with params:', { branchCode, year, semester, examType });
+      // First get the IDs we need
+      const [branchResult, examTypeResult, semesterResult] = await Promise.all([
+        supabase.from('branches').select('id').eq('code', branchCode).single(),
+        supabase.from('exam_types').select('id').eq('code', examType).single(),
+        supabase.from('semesters').select('id').eq('number', semester).single()
+      ]);
+
+      if (!branchResult.data || !examTypeResult.data || !semesterResult.data) {
+        throw new Error('Could not find required references');
+      }
+
       const { data, error } = await supabase
-        .from('question_papers')
-        .select('*')
-        .eq('branch_code', branchCode)
-        .eq('year', year)
-        .eq('semester', semester)
-        .eq('exam_type', examType);
+        .from('papers')
+        .select(`
+          *,
+          branches!inner(*),
+          exam_types!inner(*),
+          semesters!inner(*)
+        `)
+        .eq('branch_id', branchResult.data.id)
+        .eq('exam_type_id', examTypeResult.data.id)
+        .eq('semester_id', semesterResult.data.id)
+        .eq('year', year);
       
       if (error) {
         toast({
@@ -86,7 +101,7 @@ const ExamPapers = () => {
         });
         throw error;
       }
-      console.log('Fetched papers:', data);
+      
       return data;
     },
   });
@@ -123,7 +138,7 @@ const ExamPapers = () => {
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg text-gray-900">{paper.subject}</h3>
+                      <h3 className="font-semibold text-lg text-gray-900">Paper {paper.id}</h3>
                       <p className="text-sm text-gray-500">{paper.year}</p>
                     </div>
                   </div>
