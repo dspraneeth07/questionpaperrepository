@@ -112,46 +112,34 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract just the filename from the full URL
-      const urlParts = fileUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
+      // Extract the file path from the storage URL
+      const storageUrl = 'https://buzkoptlhfmfuaipqfmn.supabase.co/storage/v1/object/public/question-papers/';
+      const filePath = fileUrl.replace(storageUrl, '');
       
-      if (!fileName) {
-        throw new Error('Could not extract filename from URL');
-      }
-      
-      console.log('Attempting to download:', fileName);
+      console.log('Extracted file path:', filePath);
 
-      // Create a signed URL that will expire in 60 seconds
-      const { data: signedData, error: signUrlError } = await supabase
+      // Download the file directly using the storage API
+      const { data: fileData, error: downloadError } = await supabase
         .storage
         .from('question-papers')
-        .createSignedUrl(fileName, 60);
+        .download(filePath);
 
-      if (signUrlError) {
-        console.error('Error creating signed URL:', signUrlError);
-        throw signUrlError;
+      if (downloadError) {
+        console.error('Download error:', downloadError);
+        throw downloadError;
       }
 
-      if (!signedData?.signedUrl) {
-        throw new Error('No signed URL generated');
+      if (!fileData) {
+        throw new Error('No file data received');
       }
 
-      console.log('Generated signed URL:', signedData.signedUrl);
-
-      // Fetch the file using the signed URL
-      const response = await fetch(signedData.signedUrl);
-      if (!response.ok) {
-        throw new Error('Failed to fetch file');
-      }
-
-      const blob = await response.blob();
+      // Create a blob URL and trigger download
+      const blob = new Blob([fileData], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       
-      // Create a temporary link and trigger download
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = fileName; // Set suggested filename
+      link.download = filePath.split('/').pop() || 'download.pdf'; // Use the original filename
       document.body.appendChild(link);
       link.click();
       
