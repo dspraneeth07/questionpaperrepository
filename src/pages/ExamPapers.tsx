@@ -112,33 +112,29 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract just the relative path from the full URL
-      const urlParts = fileUrl.split('/question-papers/');
-      if (urlParts.length !== 2) {
-        throw new Error('Invalid file URL format');
-      }
-      const relativePath = urlParts[1];
-      
-      // Get the file data directly using storage.download()
-      const { data, error } = await supabase.storage
+      // Get the file data using getPublicUrl first
+      const { data: publicUrlData } = supabase.storage
         .from('question-papers')
-        .download(relativePath);
+        .getPublicUrl(fileUrl);
 
-      if (error) {
-        console.error('Download error:', error);
-        throw error;
+      if (!publicUrlData.publicUrl) {
+        throw new Error('Could not generate public URL');
       }
 
-      if (!data) {
-        throw new Error('No file data received');
+      // Fetch the file using the public URL
+      const response = await fetch(publicUrlData.publicUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
       }
 
-      // Create a blob URL and trigger download
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Create blob from the response
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
+      
+      // Trigger download
       const link = document.createElement('a');
       link.href = url;
-      link.download = relativePath;
+      link.download = fileUrl.split('/').pop() || 'download.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -174,9 +170,7 @@ const ExamPapers = () => {
         
         <h2 className="text-2xl font-bold text-primary mb-6">Question Papers</h2>
         
-        {isLoading ? (
-          <div className="text-center py-8">Loading papers...</div>
-        ) : papers && papers.length > 0 ? (
+        {papers && papers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {papers.map((paper) => (
               <Card key={paper.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
