@@ -112,23 +112,8 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract just the filename from the URL
-      const filename = fileUrl.split('/').pop();
-      if (!filename) {
-        throw new Error('Invalid file URL format');
-      }
-      
-      // Get the file data using getPublicUrl
-      const { data: publicUrlData } = supabase.storage
-        .from('question-papers')
-        .getPublicUrl(filename);
-
-      if (!publicUrlData.publicUrl) {
-        throw new Error('Could not generate public URL');
-      }
-
-      // Fetch the file using the public URL
-      const response = await fetch(publicUrlData.publicUrl);
+      // Get the direct download URL from Supabase
+      const response = await fetch(fileUrl);
       if (!response.ok) {
         throw new Error('Failed to download file');
       }
@@ -137,10 +122,10 @@ const ExamPapers = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
-      // Trigger download
+      // Create a temporary link and trigger download
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename;
+      link.download = fileUrl.split('/').pop() || 'question-paper.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
