@@ -69,7 +69,6 @@ const ExamPapers = () => {
   const { data: papers, isLoading } = useQuery({
     queryKey: ['papers', branchCode, year, semester, examType],
     queryFn: async () => {
-      // First get the IDs we need
       const [branchResult, examTypeResult, semesterResult] = await Promise.all([
         supabase.from('branches').select('id').eq('code', branchCode).single(),
         supabase.from('exam_types').select('id').eq('code', examType).single(),
@@ -108,11 +107,12 @@ const ExamPapers = () => {
 
   const handleDownload = async (fileUrl: string) => {
     try {
-      // Get the file path from the URL
-      const filePath = fileUrl.split('/').pop();
-      if (!filePath) {
-        throw new Error('Invalid file URL');
+      // Extract the file name from the full URL
+      const filePathMatch = fileUrl.match(/question-papers\/(.+)$/);
+      if (!filePathMatch) {
+        throw new Error('Invalid file URL format');
       }
+      const filePath = filePathMatch[1];
 
       // Download the file from Supabase Storage
       const { data, error } = await supabase.storage
@@ -127,7 +127,7 @@ const ExamPapers = () => {
       const url = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filePath; // Use the original filename
+      link.download = filePath.split('/').pop() || 'question-paper.pdf'; // Use the original filename
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
