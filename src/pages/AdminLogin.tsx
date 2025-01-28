@@ -17,37 +17,37 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // First check if the admin user exists
-      const { data: adminUser, error: adminError } = await supabase
-        .from('admin_users')
-        .select()
-        .eq('email', email)
-        .maybeSingle();
-
-      if (adminError) {
-        throw new Error('Error checking admin credentials');
-      }
-
-      if (!adminUser) {
-        throw new Error('Invalid credentials');
-      }
-
-      // If admin exists, attempt to sign in
+      // First attempt to sign in with Supabase auth
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        throw signInError;
+        throw new Error('Invalid credentials');
+      }
+
+      // If sign in successful, verify admin status
+      const { data: adminUser, error: adminError } = await supabase
+        .from('admin_users')
+        .select()
+        .eq('email', email)
+        .maybeSingle();
+
+      if (adminError || !adminUser) {
+        // If user is not an admin, sign them out
+        await supabase.auth.signOut();
+        throw new Error('Unauthorized access');
       }
 
       // Set admin flag in localStorage
       localStorage.setItem('adminAuthenticated', 'true');
+      
       toast({
         title: "Success",
         description: "Successfully logged in as admin",
       });
+      
       navigate('/admin/dashboard');
       
     } catch (error) {
