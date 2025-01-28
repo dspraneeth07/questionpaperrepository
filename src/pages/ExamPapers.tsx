@@ -112,48 +112,33 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the path from the full URL
-      const path = fileUrl.split('question-papers/')[1];
-      if (!path) {
+      // Get the filename from the URL
+      const filename = fileUrl.split('/').pop();
+      if (!filename) {
         throw new Error('Invalid file URL format');
       }
 
-      // First check if the file exists
-      const { data: exists, error: existsError } = await supabase
-        .storage
+      // Get the file data directly from storage
+      const { data, error } = await supabase.storage
         .from('question-papers')
-        .list('', {
-          search: path
-        });
+        .download(filename);
 
-      if (existsError || !exists || exists.length === 0) {
-        throw new Error('File not found in storage');
+      if (error) {
+        console.error('Storage error:', error);
+        throw new Error('Failed to download file from storage');
       }
 
-      // Get a signed URL that's valid for 60 seconds
-      const { data: signedUrl, error: signedUrlError } = await supabase
-        .storage
-        .from('question-papers')
-        .createSignedUrl(path, 60);
-
-      if (signedUrlError || !signedUrl?.signedUrl) {
-        throw new Error('Failed to generate download URL');
+      if (!data) {
+        throw new Error('No file data received');
       }
 
-      // Fetch the file using the signed URL
-      const response = await fetch(signedUrl.signedUrl);
-      if (!response.ok) {
-        throw new Error('Failed to download file');
-      }
-
-      // Create blob from the response
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(data);
       
       // Create a temporary link and trigger download
       const link = document.createElement('a');
       link.href = url;
-      link.download = path.split('/').pop() || 'question-paper.pdf';
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -161,7 +146,7 @@ const ExamPapers = () => {
 
       toast({
         title: "Success",
-        description: "Download started successfully",
+        description: "File downloaded successfully",
       });
     } catch (error) {
       console.error('Download error:', error);
