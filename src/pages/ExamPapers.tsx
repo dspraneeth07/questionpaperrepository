@@ -5,7 +5,7 @@ import { FileText, Download } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
@@ -84,9 +84,9 @@ const ExamPapers = () => {
         .from('papers')
         .select(`
           *,
-          branches!inner(*),
-          exam_types!inner(*),
-          semesters!inner(*)
+          branches(*),
+          exam_types(*),
+          semesters(*)
         `)
         .eq('branch_id', branchResult.data.id)
         .eq('exam_type_id', examTypeResult.data.id)
@@ -107,7 +107,44 @@ const ExamPapers = () => {
   });
 
   const handleDownload = async (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+    try {
+      // Get the file path from the URL
+      const filePath = fileUrl.split('/').pop();
+      if (!filePath) {
+        throw new Error('Invalid file URL');
+      }
+
+      // Download the file from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('question-papers')
+        .download(filePath);
+
+      if (error) {
+        throw error;
+      }
+
+      // Create a download link and trigger the download
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filePath; // Use the original filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Download started successfully",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to download the file. Please try again.",
+      });
+    }
   };
 
   return (
