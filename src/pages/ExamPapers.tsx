@@ -107,31 +107,37 @@ const ExamPapers = () => {
 
   const handleDownload = async (fileUrl: string) => {
     try {
-      console.log('Starting download for URL:', fileUrl);
+      console.log('Starting download process for:', fileUrl);
       
-      // Get the path from the storage URL
-      const storageUrl = new URL(fileUrl);
-      const pathParts = storageUrl.pathname.split('/');
-      const filePath = pathParts[pathParts.length - 1];
+      // Extract the filename from the URL, handling both full URLs and direct paths
+      let filename = fileUrl;
+      if (fileUrl.includes('question-papers')) {
+        // If it's a full URL, extract just the filename
+        filename = fileUrl.split('question-papers/').pop() || '';
+      }
       
-      if (!filePath) {
-        throw new Error('Invalid file URL');
+      console.log('Extracted filename:', filename);
+      
+      if (!filename) {
+        throw new Error('Could not extract filename from URL');
       }
 
-      console.log('Attempting to download file:', filePath);
-      
-      // Create a direct download URL using Supabase storage
+      // Create a signed URL for download
       const { data: signedUrl, error: signedUrlError } = await supabase
         .storage
         .from('question-papers')
-        .createSignedUrl(filePath, 60); // URL valid for 60 seconds
+        .createSignedUrl(filename, 60);
 
-      if (signedUrlError || !signedUrl) {
-        console.error('Error getting signed URL:', signedUrlError);
+      if (signedUrlError) {
+        console.error('Error creating signed URL:', signedUrlError);
         throw new Error('Failed to generate download URL');
       }
 
-      console.log('Generated signed URL:', signedUrl);
+      if (!signedUrl?.signedUrl) {
+        throw new Error('No signed URL generated');
+      }
+
+      console.log('Successfully generated signed URL');
 
       // Create a temporary link and trigger the download
       const link = document.createElement('a');
