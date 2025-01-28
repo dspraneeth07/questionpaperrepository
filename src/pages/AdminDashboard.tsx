@@ -39,16 +39,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Define interfaces for our data types
+interface Paper {
+  id: number;
+  branch_id: number;
+  semester_id: number;
+  exam_type_id: number;
+  year: number;
+  file_url: string;
+  created_at?: string;
+  branches?: { name: string };
+  semesters?: { number: number };
+  exam_types?: { name: string };
+}
+
+interface PapersByExamType {
+  [key: string]: Paper[];
+}
+
+interface Stats {
+  totalPapers: number;
+  totalDownloads: number;
+  branchWiseDownloads: any[];
+  monthlyActivity: any[];
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalPapers: 0,
     totalDownloads: 0,
     branchWiseDownloads: [],
     monthlyActivity: []
   });
-  const [papers, setPapers] = useState([]);
+  const [papers, setPapers] = useState<PapersByExamType>({});
   const [isLoading, setIsLoading] = useState(true);
   const [uploadData, setUploadData] = useState({
     branch_id: "",
@@ -56,10 +81,10 @@ const AdminDashboard = () => {
     exam_type_id: "",
     year: new Date().getFullYear(),
   });
-  const [editData, setEditData] = useState(null);
-  const [branches, setBranches] = useState([]);
-  const [semesters, setSemesters] = useState([]);
-  const [examTypes, setExamTypes] = useState([]);
+  const [editData, setEditData] = useState<Paper | null>(null);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [semesters, setSemesters] = useState<any[]>([]);
+  const [examTypes, setExamTypes] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
