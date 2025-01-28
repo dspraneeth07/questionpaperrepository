@@ -8,8 +8,6 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// ... keep existing code (type definitions and interfaces)
-
 const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
   const navigate = useNavigate();
@@ -112,36 +110,31 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Get the file path by removing the bucket URL and ensuring correct format
-      const filePath = fileUrl.split('/question-papers/').pop();
+      // Get the file name from the URL
+      const fileName = fileUrl.split('/').pop();
       
-      if (!filePath) {
-        throw new Error('Invalid file path');
+      if (!fileName) {
+        throw new Error('Invalid file URL');
       }
+
+      // Create a direct download link using the public URL
+      const publicUrl = `${supabase.storage.from('question-papers').getPublicUrl(fileName).data.publicUrl}`;
       
-      console.log('File path:', filePath);
-
-      const { data: fileData, error: downloadError } = await supabase
-        .storage
-        .from('question-papers')
-        .download(filePath);
-
-      if (downloadError) {
-        console.error('Download error:', downloadError);
-        throw downloadError;
+      // Fetch the file
+      const response = await fetch(publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
       }
 
-      if (!fileData) {
-        throw new Error('No file data received');
-      }
-
-      // Create blob and trigger download
-      const blob = new Blob([fileData], { type: 'application/pdf' });
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a download link and trigger the download
       const downloadUrl = window.URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = filePath.split('/').pop() || 'download.pdf';
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       
