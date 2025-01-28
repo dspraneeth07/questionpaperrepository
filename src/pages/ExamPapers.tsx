@@ -118,23 +118,13 @@ const ExamPapers = () => {
       
       console.log('File path:', filePath);
 
-      // Download the file directly
-      const { data: fileData, error: downloadError } = await supabase
-        .storage
-        .from('question-papers')
-        .download(filePath);
-
-      if (downloadError) {
-        console.error('Download error:', downloadError);
-        throw downloadError;
+      // Fetch the file using the public URL
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
       }
 
-      if (!fileData) {
-        throw new Error('No file data received');
-      }
-
-      // Create a blob URL and trigger download
-      const blob = new Blob([fileData], { type: 'application/pdf' });
+      const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
