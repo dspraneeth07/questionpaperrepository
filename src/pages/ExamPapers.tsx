@@ -110,37 +110,40 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Get the file name from the URL
-      const fileName = fileUrl.split('/').pop();
+      // Extract the file path from the URL
+      const urlParts = fileUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
       
       if (!fileName) {
         throw new Error('Invalid file URL');
       }
 
-      // Create a direct download link using the public URL
-      const publicUrl = `${supabase.storage.from('question-papers').getPublicUrl(fileName).data.publicUrl}`;
-      
-      // Fetch the file
-      const response = await fetch(publicUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
+      console.log('Downloading file:', fileName);
+
+      // Download the file directly using Supabase storage
+      const { data, error } = await supabase.storage
+        .from('question-papers')
+        .download(fileName);
+
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
       }
 
-      // Get the blob from the response
-      const blob = await response.blob();
-      
-      // Create a download link and trigger the download
-      const downloadUrl = window.URL.createObjectURL(blob);
+      if (!data) {
+        throw new Error('No file data received');
+      }
+
+      // Create a blob URL and trigger download
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = url;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+      window.URL.revokeObjectURL(url);
 
       toast({
         title: "Success",
