@@ -20,11 +20,15 @@ const AdminLogin = () => {
       // First check if the admin user exists
       const { data: adminUser, error: adminError } = await supabase
         .from('admin_users')
-        .select('*')
+        .select()
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
-      if (adminError || !adminUser) {
+      if (adminError) {
+        throw new Error('Error checking admin credentials');
+      }
+
+      if (!adminUser) {
         throw new Error('Invalid credentials');
       }
 
@@ -40,13 +44,17 @@ const AdminLogin = () => {
 
       // Set admin flag in localStorage
       localStorage.setItem('adminAuthenticated', 'true');
+      toast({
+        title: "Success",
+        description: "Successfully logged in as admin",
+      });
       navigate('/admin/dashboard');
       
     } catch (error) {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: "Invalid credentials. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid credentials. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -72,7 +80,7 @@ const AdminLogin = () => {
               </label>
               <Input
                 id="email"
-                type="text"
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
