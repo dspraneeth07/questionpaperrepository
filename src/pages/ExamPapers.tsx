@@ -1,11 +1,14 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, Download } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { FileText, Download } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+// ... keep existing code (type definitions and interfaces)
 
 const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
@@ -109,8 +112,9 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // If the URL is a full Supabase URL, extract just the file name
-      const fileName = fileUrl.split('/').pop();
+      // Extract just the filename from the full URL
+      const urlParts = fileUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
       
       if (!fileName) {
         throw new Error('Could not extract filename from URL');
@@ -118,31 +122,42 @@ const ExamPapers = () => {
       
       console.log('Attempting to download:', fileName);
 
-      // First try to get the file directly
-      const { data: fileData, error: fileError } = await supabase
+      // Create a signed URL that will expire in 60 seconds
+      const { data: signedData, error: signUrlError } = await supabase
         .storage
         .from('question-papers')
-        .download(fileName);
+        .createSignedUrl(fileName, 60);
 
-      if (fileError) {
-        console.error('Error downloading file:', fileError);
-        throw new Error('Failed to download file');
+      if (signUrlError) {
+        console.error('Error creating signed URL:', signUrlError);
+        throw signUrlError;
       }
 
-      if (!fileData) {
-        throw new Error('No file data received');
+      if (!signedData?.signedUrl) {
+        throw new Error('No signed URL generated');
       }
 
-      // Create a blob URL and trigger download
-      const blob = new Blob([fileData], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      console.log('Generated signed URL:', signedData.signedUrl);
+
+      // Fetch the file using the signed URL
+      const response = await fetch(signedData.signedUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch file');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      // Create a temporary link and trigger download
       const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
+      link.href = downloadUrl;
+      link.download = fileName; // Set suggested filename
       document.body.appendChild(link);
       link.click();
+      
+      // Cleanup
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
 
       toast({
         title: "Success",
