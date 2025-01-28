@@ -309,12 +309,32 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      const { error } = await supabase
+      // First get the paper details to get the file URL
+      const { data: paper, error: fetchError } = await supabase
+        .from('papers')
+        .select('*')
+        .eq('id', paperId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Extract filename from the URL
+      const fileName = paper.file_url.split('/').pop();
+
+      // Delete the file from storage
+      const { error: storageError } = await supabase.storage
+        .from('question-papers')
+        .remove([fileName]);
+
+      if (storageError) throw storageError;
+
+      // Delete the paper record from the database
+      const { error: deleteError } = await supabase
         .from('papers')
         .delete()
         .eq('id', paperId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
       toast({
         title: "Success",
