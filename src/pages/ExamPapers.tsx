@@ -112,10 +112,9 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the filename from the URL, handling both public and direct URLs
-      const filename = fileUrl.includes('question-papers/') 
-        ? fileUrl.split('question-papers/')[1]
-        : fileUrl.split('/').pop();
+      // Extract just the filename from the end of the URL
+      const urlParts = fileUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
 
       if (!filename) {
         throw new Error('Invalid file URL format');
@@ -123,7 +122,20 @@ const ExamPapers = () => {
 
       console.log('Attempting to download file:', filename);
 
-      // Download the file directly from the bucket
+      // First check if the file exists
+      const { data: fileExists } = await supabase
+        .storage
+        .from('question-papers')
+        .list('', {
+          limit: 1,
+          search: filename
+        });
+
+      if (!fileExists || fileExists.length === 0) {
+        throw new Error('File not found in storage');
+      }
+
+      // Download the file using the correct path
       const { data, error } = await supabase
         .storage
         .from('question-papers')
