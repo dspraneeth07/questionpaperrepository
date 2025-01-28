@@ -112,20 +112,26 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Get the filename from the URL
-      const filename = fileUrl.split('/').pop();
+      // Extract the filename from the URL, handling both public and direct URLs
+      const filename = fileUrl.includes('question-papers/') 
+        ? fileUrl.split('question-papers/')[1]
+        : fileUrl.split('/').pop();
+
       if (!filename) {
         throw new Error('Invalid file URL format');
       }
 
-      // Get the file data directly from storage
-      const { data, error } = await supabase.storage
+      console.log('Attempting to download file:', filename);
+
+      // Download the file directly from the bucket
+      const { data, error } = await supabase
+        .storage
         .from('question-papers')
         .download(filename);
 
       if (error) {
         console.error('Storage error:', error);
-        throw new Error('Failed to download file from storage');
+        throw error;
       }
 
       if (!data) {
@@ -151,9 +157,9 @@ const ExamPapers = () => {
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to download the file",
+        description: error instanceof Error ? error.message : "Failed to download file",
+        variant: "destructive",
       });
     }
   };
