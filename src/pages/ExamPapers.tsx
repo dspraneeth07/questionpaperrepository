@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// ... keep existing code (interfaces and type definitions)
+
 const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
   const navigate = useNavigate();
@@ -110,38 +112,41 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the file path from the URL
-      const urlParts = fileUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
+      // Extract just the filename from the full URL by getting the last segment
+      const fileName = fileUrl.split('/').pop();
       
       if (!fileName) {
         throw new Error('Invalid file URL');
       }
 
-      console.log('Downloading file:', fileName);
-
-      // Download the file directly using Supabase storage
-      const { data, error } = await supabase.storage
+      // Get the public URL for the file
+      const { data: publicUrlData } = supabase.storage
         .from('question-papers')
-        .download(fileName);
+        .getPublicUrl(fileName);
 
-      if (error) {
-        console.error('Download error:', error);
-        throw error;
+      if (!publicUrlData.publicUrl) {
+        throw new Error('Failed to get public URL');
       }
 
-      if (!data) {
-        throw new Error('No file data received');
+      // Fetch the file using the public URL
+      const response = await fetch(publicUrlData.publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
       }
 
-      // Create a blob URL and trigger download
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create a download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
+      
+      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
