@@ -123,13 +123,18 @@ const ExamPapers = () => {
       console.log('Attempting to download file:', filename);
 
       // First check if the file exists
-      const { data: fileExists } = await supabase
+      const { data: fileExists, error: listError } = await supabase
         .storage
         .from('question-papers')
         .list('', {
           limit: 1,
           search: filename
         });
+
+      if (listError) {
+        console.error('Error checking file existence:', listError);
+        throw new Error('Failed to verify file existence');
+      }
 
       if (!fileExists || fileExists.length === 0) {
         throw new Error('File not found in storage');
@@ -169,9 +174,9 @@ const ExamPapers = () => {
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to download file",
         variant: "destructive",
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Failed to download file",
       });
     }
   };
