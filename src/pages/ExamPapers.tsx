@@ -109,44 +109,40 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the filename from the URL, handling both full URLs and direct paths
-      let filename = fileUrl;
-      if (fileUrl.includes('question-papers')) {
-        // If it's a full URL, extract just the filename
-        filename = fileUrl.split('question-papers/').pop() || '';
-      }
+      // If the URL is a full Supabase URL, extract just the file name
+      const fileName = fileUrl.split('/').pop();
       
-      console.log('Extracted filename:', filename);
-      
-      if (!filename) {
+      if (!fileName) {
         throw new Error('Could not extract filename from URL');
       }
+      
+      console.log('Attempting to download:', fileName);
 
-      // Create a signed URL for download
-      const { data: signedUrl, error: signedUrlError } = await supabase
+      // First try to get the file directly
+      const { data: fileData, error: fileError } = await supabase
         .storage
         .from('question-papers')
-        .createSignedUrl(filename, 60);
+        .download(fileName);
 
-      if (signedUrlError) {
-        console.error('Error creating signed URL:', signedUrlError);
-        throw new Error('Failed to generate download URL');
+      if (fileError) {
+        console.error('Error downloading file:', fileError);
+        throw new Error('Failed to download file');
       }
 
-      if (!signedUrl?.signedUrl) {
-        throw new Error('No signed URL generated');
+      if (!fileData) {
+        throw new Error('No file data received');
       }
 
-      console.log('Successfully generated signed URL');
-
-      // Create a temporary link and trigger the download
+      // Create a blob URL and trigger download
+      const blob = new Blob([fileData], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = signedUrl.signedUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.href = url;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       toast({
         title: "Success",
@@ -157,7 +153,7 @@ const ExamPapers = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to download the file. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to download the file",
       });
     }
   };
