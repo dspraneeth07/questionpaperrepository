@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Table,
   TableBody,
@@ -85,12 +85,10 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch papers count
       const { count: papersCount } = await supabase
         .from('papers')
         .select('*', { count: 'exact' });
 
-      // Fetch papers with branch details
       const { data: papersData } = await supabase
         .from('papers')
         .select(`
@@ -136,17 +134,20 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Upload file to storage
+      // Generate a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
 
-      const { data: uploadResult, error: uploadError } = await supabase.storage
+      // Upload file to Supabase Storage
+      const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
-      // Get the public URL
+      // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('question-papers')
         .getPublicUrl(fileName);
@@ -162,7 +163,9 @@ const AdminDashboard = () => {
           file_url: publicUrl
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        throw dbError;
+      }
 
       toast({
         title: "Success",
