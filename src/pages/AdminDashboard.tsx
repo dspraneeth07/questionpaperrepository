@@ -274,9 +274,9 @@ const AdminDashboard = () => {
       const { error: updateError } = await supabase
         .from('papers')
         .update({
-          branch_id: parseInt(editData.branch_id),
-          semester_id: parseInt(editData.semester_id),
-          exam_type_id: parseInt(editData.exam_type_id),
+          branch_id: editData.branch_id,
+          semester_id: editData.semester_id,
+          exam_type_id: editData.exam_type_id,
           year: editData.year,
           file_url: fileUrl
         })
@@ -512,7 +512,7 @@ const AdminDashboard = () => {
                                   <Label htmlFor="edit-branch">Branch</Label>
                                   <Select
                                     value={editData?.branch_id.toString()}
-                                    onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: value }))}
+                                    onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: parseInt(value) }))}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="Select Branch" />
@@ -531,7 +531,7 @@ const AdminDashboard = () => {
                                   <Label htmlFor="edit-semester">Semester</Label>
                                   <Select
                                     value={editData?.semester_id.toString()}
-                                    onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: value }))}
+                                    onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: parseInt(value) }))}
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="Select Semester" />
