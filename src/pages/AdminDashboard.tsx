@@ -54,13 +54,18 @@ const AdminDashboard = () => {
   const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('adminAuthenticated');
-    if (!isAdmin) {
-      navigate('/admin/login');
-    }
+    checkAuth();
     fetchDashboardData();
     fetchMetadata();
   }, [navigate]);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/admin/login');
+      return;
+    }
+  };
 
   const fetchMetadata = async () => {
     try {
@@ -134,6 +139,18 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
+      // Check authentication status
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to upload files",
+          variant: "destructive",
+        });
+        navigate('/admin/login');
+        return;
+      }
+
       // Generate a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
@@ -141,7 +158,10 @@ const AdminDashboard = () => {
       // Upload file to Supabase Storage
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
         throw uploadError;
