@@ -112,19 +112,28 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the file path from the storage URL
-      const storageUrl = 'https://buzkoptlhfmfuaipqfmn.supabase.co/storage/v1/object/public/question-papers/';
-      const filePath = fileUrl.replace(storageUrl, '');
+      // Get the file path by removing the bucket URL
+      const storageUrl = new URL(fileUrl);
+      const filePath = decodeURIComponent(storageUrl.pathname.split('/question-papers/')[1]);
       
       console.log('File path:', filePath);
 
-      // Fetch the file using the public URL
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      // Use Supabase storage download
+      const { data: fileData, error: downloadError } = await supabase
+        .storage
+        .from('question-papers')
+        .download(filePath);
+
+      if (downloadError) {
+        console.error('Download error:', downloadError);
+        throw downloadError;
       }
 
-      const blob = await response.blob();
+      if (!fileData) {
+        throw new Error('No file data received');
+      }
+
+      const blob = new Blob([fileData], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
