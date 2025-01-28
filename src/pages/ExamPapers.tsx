@@ -107,31 +107,29 @@ const ExamPapers = () => {
 
   const handleDownload = async (fileUrl: string) => {
     try {
-      // Extract the file name from the full URL
-      const filePathMatch = fileUrl.match(/question-papers\/(.+)$/);
-      if (!filePathMatch) {
-        throw new Error('Invalid file URL format');
-      }
-      const filePath = filePathMatch[1];
-
-      // Download the file from Supabase Storage
-      const { data, error } = await supabase.storage
+      console.log('Starting download for URL:', fileUrl);
+      
+      // Create a direct download URL using Supabase storage
+      const { data: signedUrl, error: signedUrlError } = await supabase
+        .storage
         .from('question-papers')
-        .download(filePath);
+        .createSignedUrl(fileUrl, 60); // URL valid for 60 seconds
 
-      if (error) {
-        throw error;
+      if (signedUrlError || !signedUrl) {
+        console.error('Error getting signed URL:', signedUrlError);
+        throw new Error('Failed to generate download URL');
       }
 
-      // Create a download link and trigger the download
-      const url = window.URL.createObjectURL(data);
+      console.log('Generated signed URL:', signedUrl);
+
+      // Create a temporary link and trigger the download
       const link = document.createElement('a');
-      link.href = url;
-      link.download = filePath.split('/').pop() || 'question-paper.pdf'; // Use the original filename
+      link.href = signedUrl.signedUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
 
       toast({
         title: "Success",
