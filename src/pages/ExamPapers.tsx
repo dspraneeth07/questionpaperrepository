@@ -112,41 +112,28 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract just the filename from the full URL by getting the last segment
-      const fileName = fileUrl.split('/').pop();
-      
-      if (!fileName) {
-        throw new Error('Invalid file URL');
-      }
-
-      // Get the public URL for the file
-      const { data: publicUrlData } = supabase.storage
+      // Get the file data directly using storage.download()
+      const { data, error } = await supabase.storage
         .from('question-papers')
-        .getPublicUrl(fileName);
+        .download(fileUrl);
 
-      if (!publicUrlData.publicUrl) {
-        throw new Error('Failed to get public URL');
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
       }
 
-      // Fetch the file using the public URL
-      const response = await fetch(publicUrlData.publicUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
+      if (!data) {
+        throw new Error('No file data received');
       }
 
-      // Convert response to blob
-      const blob = await response.blob();
-      
-      // Create a download link
+      // Create a blob URL and trigger download
+      const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName;
+      link.download = fileUrl.split('/').pop() || 'download.pdf';
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
