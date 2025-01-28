@@ -109,35 +109,22 @@ const ExamPapers = () => {
     try {
       console.log('Starting download for URL:', fileUrl);
       
-      // Extract just the filename from the full URL
-      const fileName = fileUrl.split('/').pop();
+      // Get the path from the storage URL
+      const storageUrl = new URL(fileUrl);
+      const pathParts = storageUrl.pathname.split('/');
+      const filePath = pathParts[pathParts.length - 1];
       
-      if (!fileName) {
+      if (!filePath) {
         throw new Error('Invalid file URL');
       }
 
-      console.log('Attempting to verify file existence:', fileName);
-      
-      // First, check if the file exists
-      const { data: fileExists, error: existsError } = await supabase
-        .storage
-        .from('question-papers')
-        .list('', {
-          search: fileName
-        });
-
-      if (existsError || !fileExists || fileExists.length === 0) {
-        console.error('File not found in storage:', fileName);
-        throw new Error('File not found in storage');
-      }
-
-      console.log('File exists, creating signed URL');
+      console.log('Attempting to download file:', filePath);
       
       // Create a direct download URL using Supabase storage
       const { data: signedUrl, error: signedUrlError } = await supabase
         .storage
         .from('question-papers')
-        .createSignedUrl(fileName, 60); // URL valid for 60 seconds
+        .createSignedUrl(filePath, 60); // URL valid for 60 seconds
 
       if (signedUrlError || !signedUrl) {
         console.error('Error getting signed URL:', signedUrlError);
