@@ -116,30 +116,35 @@ const ExamPapers = () => {
       const storageUrl = 'https://buzkoptlhfmfuaipqfmn.supabase.co/storage/v1/object/public/question-papers/';
       const filePath = fileUrl.replace(storageUrl, '');
       
-      console.log('Extracted file path:', filePath);
+      console.log('File path:', filePath);
 
-      // Download the file directly using the storage API
-      const { data: fileData, error: downloadError } = await supabase
+      // Create a signed URL for the file
+      const { data: signedData, error: signUrlError } = await supabase
         .storage
         .from('question-papers')
-        .download(filePath);
+        .createSignedUrl(filePath, 60); // URL valid for 60 seconds
 
-      if (downloadError) {
-        console.error('Download error:', downloadError);
-        throw downloadError;
+      if (signUrlError) {
+        console.error('Sign URL error:', signUrlError);
+        throw signUrlError;
       }
 
-      if (!fileData) {
-        throw new Error('No file data received');
+      if (!signedData?.signedUrl) {
+        throw new Error('No signed URL generated');
       }
 
-      // Create a blob URL and trigger download
-      const blob = new Blob([fileData], { type: 'application/pdf' });
+      // Fetch the file using the signed URL
+      const response = await fetch(signedData.signedUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = filePath.split('/').pop() || 'download.pdf'; // Use the original filename
+      link.download = filePath.split('/').pop() || 'download.pdf';
       document.body.appendChild(link);
       link.click();
       
