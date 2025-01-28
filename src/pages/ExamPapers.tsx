@@ -112,13 +112,15 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Get the file path by removing the bucket URL
-      const storageUrl = new URL(fileUrl);
-      const filePath = decodeURIComponent(storageUrl.pathname.split('/question-papers/')[1]);
+      // Get the file path by removing the bucket URL and ensuring correct format
+      const filePath = fileUrl.split('/question-papers/').pop();
+      
+      if (!filePath) {
+        throw new Error('Invalid file path');
+      }
       
       console.log('File path:', filePath);
 
-      // Use Supabase storage download
       const { data: fileData, error: downloadError } = await supabase
         .storage
         .from('question-papers')
@@ -133,6 +135,7 @@ const ExamPapers = () => {
         throw new Error('No file data received');
       }
 
+      // Create blob and trigger download
       const blob = new Blob([fileData], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       
