@@ -129,15 +129,26 @@ const AdminDashboard = () => {
         .from('papers')
         .select('*', { count: 'exact' });
 
-      const { data: papersData } = await supabase
+      // Add logging to see what data we're getting
+      console.log('Fetching papers data...');
+      
+      const { data: papersData, error: papersError } = await supabase
         .from('papers')
         .select(`
           *,
-          branches:branch_id(name),
+          branches:branch_id(name, code),
           semesters:semester_id(number),
-          exam_types:exam_type_id(name)
+          exam_types:exam_type_id(name, code)
         `)
         .order('created_at', { ascending: false });
+
+      if (papersError) {
+        console.error('Error fetching papers:', papersError);
+        throw papersError;
+      }
+
+      // Log the retrieved data for debugging
+      console.log('Retrieved papers data:', papersData);
 
       setStats({
         totalPapers: papersCount || 0,
@@ -146,16 +157,18 @@ const AdminDashboard = () => {
         monthlyActivity: []
       });
 
-      // Group papers by exam type
+      // Group papers by exam type with additional logging
       const groupedPapers = (papersData || []).reduce((acc, paper) => {
         const examType = paper.exam_types?.name || 'Unknown';
         if (!acc[examType]) {
           acc[examType] = [];
         }
         acc[examType].push(paper);
+        console.log(`Adding paper to ${examType}:`, paper);
         return acc;
       }, {});
 
+      console.log('Grouped papers:', groupedPapers);
       setPapers(groupedPapers);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -194,6 +207,14 @@ const AdminDashboard = () => {
         return;
       }
 
+      // Log upload data for debugging
+      console.log('Uploading file with data:', {
+        branch_id: uploadData.branch_id,
+        semester_id: uploadData.semester_id,
+        exam_type_id: uploadData.exam_type_id,
+        year: uploadData.year
+      });
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
 
@@ -201,11 +222,17 @@ const AdminDashboard = () => {
         .from('question-papers')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('File upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('question-papers')
         .getPublicUrl(fileName);
+
+      // Log the public URL for debugging
+      console.log('File uploaded successfully, public URL:', publicUrl);
 
       const { error: dbError } = await supabase
         .from('papers')
@@ -217,14 +244,19 @@ const AdminDashboard = () => {
           file_url: publicUrl
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        throw dbError;
+      }
 
       toast({
         title: "Success",
         description: "Question paper uploaded successfully",
       });
 
-      fetchDashboardData();
+      // Immediately fetch updated data
+      await fetchDashboardData();
+      
       setFile(null);
       setUploadData({
         branch_id: "",
