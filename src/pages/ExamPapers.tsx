@@ -109,11 +109,20 @@ const ExamPapers = () => {
     try {
       console.log('Starting download for URL:', fileUrl);
       
+      // Extract just the filename from the full URL
+      const fileName = fileUrl.split('/').pop();
+      
+      if (!fileName) {
+        throw new Error('Invalid file URL');
+      }
+
+      console.log('Extracted filename:', fileName);
+      
       // Create a direct download URL using Supabase storage
       const { data: signedUrl, error: signedUrlError } = await supabase
         .storage
         .from('question-papers')
-        .createSignedUrl(fileUrl, 60); // URL valid for 60 seconds
+        .createSignedUrl(fileName, 60); // URL valid for 60 seconds
 
       if (signedUrlError || !signedUrl) {
         console.error('Error getting signed URL:', signedUrlError);
