@@ -116,7 +116,22 @@ const ExamPapers = () => {
         throw new Error('Invalid file URL');
       }
 
-      console.log('Extracted filename:', fileName);
+      console.log('Attempting to verify file existence:', fileName);
+      
+      // First, check if the file exists
+      const { data: fileExists, error: existsError } = await supabase
+        .storage
+        .from('question-papers')
+        .list('', {
+          search: fileName
+        });
+
+      if (existsError || !fileExists || fileExists.length === 0) {
+        console.error('File not found in storage:', fileName);
+        throw new Error('File not found in storage');
+      }
+
+      console.log('File exists, creating signed URL');
       
       // Create a direct download URL using Supabase storage
       const { data: signedUrl, error: signedUrlError } = await supabase
@@ -149,7 +164,7 @@ const ExamPapers = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to download the file. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to download the file. Please try again.",
       });
     }
   };
