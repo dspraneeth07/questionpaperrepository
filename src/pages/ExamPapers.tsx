@@ -112,10 +112,17 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
+      // Extract just the relative path from the full URL
+      const urlParts = fileUrl.split('/question-papers/');
+      if (urlParts.length !== 2) {
+        throw new Error('Invalid file URL format');
+      }
+      const relativePath = urlParts[1];
+      
       // Get the file data directly using storage.download()
       const { data, error } = await supabase.storage
         .from('question-papers')
-        .download(fileUrl);
+        .download(relativePath);
 
       if (error) {
         console.error('Download error:', error);
@@ -131,7 +138,7 @@ const ExamPapers = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileUrl.split('/').pop() || 'download.pdf';
+      link.download = relativePath;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
