@@ -5,6 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Pencil, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Table,
   TableBody,
@@ -48,10 +56,12 @@ const AdminDashboard = () => {
     exam_type_id: "",
     year: new Date().getFullYear(),
   });
+  const [editData, setEditData] = useState(null);
   const [branches, setBranches] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [examTypes, setExamTypes] = useState([]);
   const [file, setFile] = useState<File | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -111,7 +121,17 @@ const AdminDashboard = () => {
         monthlyActivity: []
       });
 
-      setPapers(papersData || []);
+      // Group papers by exam type
+      const groupedPapers = (papersData || []).reduce((acc, paper) => {
+        const examType = paper.exam_types?.name || 'Unknown';
+        if (!acc[examType]) {
+          acc[examType] = [];
+        }
+        acc[examType].push(paper);
+        return acc;
+      }, {});
+
+      setPapers(groupedPapers);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
@@ -138,8 +158,6 @@ const AdminDashboard = () => {
 
     try {
       setIsLoading(true);
-
-      // Check authentication status
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -151,28 +169,19 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Generate a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
 
-      // Upload file to Supabase Storage
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(fileName, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('question-papers')
         .getPublicUrl(fileName);
 
-      // Save paper record in database
       const { error: dbError } = await supabase
         .from('papers')
         .insert({
@@ -183,19 +192,14 @@ const AdminDashboard = () => {
           file_url: publicUrl
         });
 
-      if (dbError) {
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
       toast({
         title: "Success",
         description: "Question paper uploaded successfully",
       });
 
-      // Refresh dashboard data
       fetchDashboardData();
-      
-      // Reset form
       setFile(null);
       setUploadData({
         branch_id: "",
@@ -203,12 +207,101 @@ const AdminDashboard = () => {
         exam_type_id: "",
         year: new Date().getFullYear(),
       });
-      
     } catch (error) {
       console.error('Error uploading paper:', error);
       toast({
         title: "Error",
         description: "Failed to upload question paper",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editData) return;
+
+    try {
+      setIsLoading(true);
+
+      let fileUrl = editData.file_url;
+
+      if (file) {
+        // Upload new file if provided
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('question-papers')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('question-papers')
+          .getPublicUrl(fileName);
+
+        fileUrl = publicUrl;
+      }
+
+      const { error: updateError } = await supabase
+        .from('papers')
+        .update({
+          branch_id: parseInt(editData.branch_id),
+          semester_id: parseInt(editData.semester_id),
+          exam_type_id: parseInt(editData.exam_type_id),
+          year: editData.year,
+          file_url: fileUrl
+        })
+        .eq('id', editData.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success",
+        description: "Question paper updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error updating paper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update question paper",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (paperId: number) => {
+    if (!confirm('Are you sure you want to delete this question paper?')) return;
+
+    try {
+      setIsLoading(true);
+
+      const { error } = await supabase
+        .from('papers')
+        .delete()
+        .eq('id', paperId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Question paper deleted successfully",
+      });
+
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error deleting paper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete question paper",
         variant: "destructive",
       });
     } finally {
@@ -350,33 +443,128 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
-        {/* Papers Table */}
+        {/* Papers Table - Now Grouped by Exam Type */}
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-4">Question Papers</h3>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Document Name</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Semester</TableHead>
-                  <TableHead>Paper Type</TableHead>
-                  <TableHead>Downloads</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {papers.map((paper: any) => (
-                  <TableRow key={paper.id}>
-                    <TableCell>{paper.file_url.split('/').pop()}</TableCell>
-                    <TableCell>{paper.branches?.name}</TableCell>
-                    <TableCell>{paper.semesters?.number}</TableCell>
-                    <TableCell>{paper.exam_types?.name}</TableCell>
-                    <TableCell>-</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {Object.entries(papers).map(([examType, papersList]) => (
+            <div key={examType} className="mb-8">
+              <h4 className="text-md font-medium mb-4">{examType}</h4>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document Name</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Semester</TableHead>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {papersList.map((paper: any) => (
+                      <TableRow key={paper.id}>
+                        <TableCell>{paper.file_url.split('/').pop()}</TableCell>
+                        <TableCell>{paper.branches?.name}</TableCell>
+                        <TableCell>{paper.semesters?.number}</TableCell>
+                        <TableCell>{paper.year}</TableCell>
+                        <TableCell className="space-x-2">
+                          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setEditData(paper)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Question Paper</DialogTitle>
+                              </DialogHeader>
+                              <form onSubmit={handleEdit} className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit-branch">Branch</Label>
+                                  <Select
+                                    value={editData?.branch_id.toString()}
+                                    onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select Branch" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {branches.map((branch) => (
+                                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                                          {branch.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit-semester">Semester</Label>
+                                  <Select
+                                    value={editData?.semester_id.toString()}
+                                    onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select Semester" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {semesters.map((semester) => (
+                                        <SelectItem key={semester.id} value={semester.id.toString()}>
+                                          {semester.number}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit-year">Year</Label>
+                                  <Input
+                                    id="edit-year"
+                                    type="number"
+                                    value={editData?.year}
+                                    onChange={(e) => setEditData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                                    min={2000}
+                                    max={new Date().getFullYear()}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
+                                  <Input
+                                    id="edit-file"
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                  />
+                                </div>
+
+                                <Button type="submit" disabled={isLoading}>
+                                  {isLoading ? "Updating..." : "Update Question Paper"}
+                                </Button>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDelete(paper.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ))}
         </Card>
       </div>
     </div>
