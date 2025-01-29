@@ -273,13 +273,18 @@ const AdminDashboard = () => {
     }
   };
 
+  const sanitizeFileName = (fileName: string) => {
+    const cleanName = fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
+    return cleanName.toLowerCase();
+  };
+
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !uploadData.branch_id || !uploadData.semester_id) {
+    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including subject name",
         variant: "destructive",
       });
       return;
@@ -298,12 +303,16 @@ const AdminDashboard = () => {
         return;
       }
 
-      const sanitizedFileName = sanitizeFileName(file.name);
-      console.log('Uploading file:', sanitizedFileName);
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const subjectSlug = sanitizeFileName(uploadData.subject_name);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const finalFileName = `${subjectSlug}_${timestamp}.${fileExt}`;
+
+      console.log('Uploading file:', finalFileName);
 
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
-        .upload(sanitizedFileName, file, {
+        .upload(finalFileName, file, {
           upsert: true
         });
 
@@ -314,7 +323,7 @@ const AdminDashboard = () => {
 
       const { data: { publicUrl } } = supabase.storage
         .from('question-papers')
-        .getPublicUrl(sanitizedFileName);
+        .getPublicUrl(finalFileName);
 
       console.log('File uploaded successfully, public URL:', publicUrl);
 
@@ -323,10 +332,10 @@ const AdminDashboard = () => {
         .insert({
           branch_id: parseInt(uploadData.branch_id),
           semester_id: parseInt(uploadData.semester_id),
-          exam_type_id: null, // No longer used
+          exam_type_id: null,
           year: uploadData.year,
           file_url: publicUrl,
-          subject_name: uploadData.subject_name // Added subject name
+          subject_name: uploadData.subject_name
         });
 
       if (dbError) {
@@ -494,10 +503,6 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const sanitizeFileName = (fileName: string) => {
-    return fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
   };
 
   if (isLoading) {
