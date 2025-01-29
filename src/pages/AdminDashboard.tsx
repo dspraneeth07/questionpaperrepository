@@ -320,9 +320,11 @@ const AdminDashboard = () => {
 
     try {
       setIsLoading(true);
+      
+      // First, get the paper details to get the file URL
       const { data: paper, error: fetchError } = await supabase
         .from('papers')
-        .select('*')
+        .select('file_url')
         .eq('id', paperId)
         .single();
 
@@ -331,6 +333,7 @@ const AdminDashboard = () => {
         throw fetchError;
       }
 
+      // Extract the filename from the URL
       const fileUrl = new URL(paper.file_url);
       const filePath = decodeURIComponent(fileUrl.pathname.split('/question-papers/').pop() || '');
 
@@ -340,12 +343,14 @@ const AdminDashboard = () => {
 
       console.log('Attempting to delete file:', filePath);
 
+      // Delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('question-papers')
         .remove([filePath]);
 
       if (storageError) {
         console.error('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage deletion fails
         toast({
           title: "Warning",
           description: "Could not delete file from storage, but will remove database entry",
@@ -353,6 +358,7 @@ const AdminDashboard = () => {
         });
       }
 
+      // Delete the database entry
       const { error: deleteError } = await supabase
         .from('papers')
         .delete()
