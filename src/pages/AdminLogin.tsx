@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
@@ -18,13 +18,20 @@ const AdminLogin = () => {
 
     try {
       // First attempt to sign in with Supabase auth
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        throw new Error('Invalid credentials');
+        if (signInError.message === "Invalid login credentials") {
+          throw new Error("Invalid email or password. Please try again.");
+        }
+        throw signInError;
+      }
+
+      if (!data.user) {
+        throw new Error("No user data returned");
       }
 
       // If sign in successful, verify admin status
@@ -34,10 +41,16 @@ const AdminLogin = () => {
         .eq('email', email)
         .maybeSingle();
 
-      if (adminError || !adminUser) {
+      if (adminError) {
+        // If there's an error checking admin status, sign out the user
+        await supabase.auth.signOut();
+        throw new Error('Error verifying admin status');
+      }
+
+      if (!adminUser) {
         // If user is not an admin, sign them out
         await supabase.auth.signOut();
-        throw new Error('Unauthorized access');
+        throw new Error('Unauthorized access. This account does not have admin privileges.');
       }
 
       // Set admin flag in localStorage
@@ -54,7 +67,7 @@ const AdminLogin = () => {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Invalid credentials. Please try again.",
+        description: error instanceof Error ? error.message : "An error occurred during login",
         variant: "destructive",
       });
     } finally {
