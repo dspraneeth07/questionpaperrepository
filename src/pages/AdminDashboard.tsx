@@ -171,6 +171,17 @@ const AdminDashboard = () => {
         return;
       }
 
+      // Get default exam type (End Semester)
+      const { data: examType } = await supabase
+        .from('exam_types')
+        .select('id')
+        .eq('code', 'END_SEM')
+        .single();
+
+      if (!examType) {
+        throw new Error('Default exam type not found');
+      }
+
       const fileExt = file.name.split('.').pop() || 'pdf';
       const subjectSlug = sanitizeFileName(uploadData.subject_name);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -202,7 +213,8 @@ const AdminDashboard = () => {
           semester_id: parseInt(uploadData.semester_id),
           year: uploadData.year,
           file_url: publicUrl,
-          subject_name: uploadData.subject_name
+          subject_name: uploadData.subject_name,
+          exam_type_id: examType.id  // Add the default exam type ID
         });
 
       if (dbError) {
