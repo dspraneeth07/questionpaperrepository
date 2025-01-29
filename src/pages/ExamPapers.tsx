@@ -13,6 +13,20 @@ const ExamPapers = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Validate URL parameters
+  const semesterNumber = parseInt(semester || '0', 10);
+  if (isNaN(semesterNumber)) {
+    console.error('Invalid semester number:', semester);
+    navigate('/');
+    return null;
+  }
+
+  if (!branchCode || !examType) {
+    console.error('Missing required parameters:', { branchCode, examType });
+    navigate('/');
+    return null;
+  }
+
   const { data: branch } = useQuery({
     queryKey: ['branch', branchCode],
     queryFn: async () => {
@@ -68,41 +82,59 @@ const ExamPapers = () => {
   });
 
   const { data: papers, isLoading } = useQuery({
-    queryKey: ['papers', branchCode, year, semester, examType],
+    queryKey: ['papers', branchCode, year, semesterNumber, examType],
     queryFn: async () => {
-      const [branchResult, examTypeResult, semesterResult] = await Promise.all([
-        supabase.from('branches').select('id').eq('code', branchCode).single(),
-        supabase.from('exam_types').select('id').eq('code', examType).single(),
-        supabase.from('semesters').select('id').eq('number', parseInt(semester || '0', 10)).single()
-      ]);
+      try {
+        // Fetch references sequentially to handle errors better
+        const branchResult = await supabase
+          .from('branches')
+          .select('id')
+          .eq('code', branchCode)
+          .single();
+        
+        if (branchResult.error) throw new Error('Branch not found');
 
-      if (!branchResult.data || !examTypeResult.data || !semesterResult.data) {
-        throw new Error('Could not find required references');
-      }
+        const examTypeResult = await supabase
+          .from('exam_types')
+          .select('id')
+          .eq('code', examType)
+          .single();
+        
+        if (examTypeResult.error) throw new Error('Exam type not found');
 
-      const { data, error } = await supabase
-        .from('papers')
-        .select(`
-          *,
-          branches(*),
-          exam_types(*),
-          semesters(*)
-        `)
-        .eq('branch_id', branchResult.data.id)
-        .eq('exam_type_id', examTypeResult.data.id)
-        .eq('semester_id', semesterResult.data.id)
-        .eq('year', parseInt(year || '0', 10));
-      
-      if (error) {
+        const semesterResult = await supabase
+          .from('semesters')
+          .select('id')
+          .eq('number', semesterNumber)
+          .single();
+        
+        if (semesterResult.error) throw new Error('Semester not found');
+
+        const { data, error } = await supabase
+          .from('papers')
+          .select(`
+            *,
+            branches(*),
+            exam_types(*),
+            semesters(*)
+          `)
+          .eq('branch_id', branchResult.data.id)
+          .eq('exam_type_id', examTypeResult.data.id)
+          .eq('semester_id', semesterResult.data.id)
+          .eq('year', parseInt(year || '0', 10));
+        
+        if (error) throw error;
+        return data;
+
+      } catch (error) {
+        console.error('Error fetching papers:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to fetch papers",
+          description: error instanceof Error ? error.message : "Failed to fetch papers",
         });
         throw error;
       }
-      
-      return data;
     },
   });
 
@@ -110,13 +142,11 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the filename from the URL
       const urlParts = fileUrl.split('/');
       const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
 
       console.log('Attempting to download file:', filename);
 
-      // Try to download using the public URL directly first
       try {
         const response = await fetch(fileUrl);
         if (response.ok) {
@@ -140,7 +170,6 @@ const ExamPapers = () => {
         console.error('Direct download failed, trying Supabase storage:', fetchError);
       }
 
-      // If direct download fails, try Supabase storage
       const { data, error } = await supabase
         .storage
         .from('question-papers')
