@@ -37,7 +37,8 @@ const ExamPapers = () => {
     return null;
   }
 
-  const { data: branch, isError: isBranchError } = useQuery({
+  // Query for branch details with retry
+  const { data: branch } = useQuery({
     queryKey: ['branch', branchCode],
     queryFn: async () => {
       try {
@@ -70,6 +71,8 @@ const ExamPapers = () => {
         throw error;
       }
     },
+    retry: 3, // Add retry attempts
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   const { data: examTypeDetails } = useQuery({
@@ -188,37 +191,27 @@ const ExamPapers = () => {
         return;
       }
 
+      // Check if file exists in storage before attempting download
       const urlParts = fileUrl.split('/');
       const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
+      
+      const { data: fileExists } = await supabase
+        .storage
+        .from('question-papers')
+        .list('', {
+          search: filename
+        });
 
-      console.log('Attempting to download file:', filename);
-
-      // First try direct download
-      try {
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
+      if (!fileExists || fileExists.length === 0) {
         toast({
-          title: "Success",
-          description: "File downloaded successfully",
+          variant: "destructive",
+          title: "File Not Found",
+          description: "The requested file is no longer available.",
         });
         return;
-      } catch (fetchError) {
-        console.error('Direct download failed:', fetchError);
       }
 
-      // Fallback to Supabase storage
+      // Try to download using Supabase storage
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -229,7 +222,7 @@ const ExamPapers = () => {
         toast({
           variant: "destructive",
           title: "Download failed",
-          description: "The requested file could not be found. It may have been deleted or moved.",
+          description: "The file could not be downloaded. Please try again later.",
         });
         return;
       }
