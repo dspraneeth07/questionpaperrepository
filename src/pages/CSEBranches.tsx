@@ -13,10 +13,13 @@ const CSEBranches = () => {
       const { data, error } = await supabase
         .from('branches')
         .select('*')
-        .or('code.eq.CSE,code.eq.CSE-AIML') // Only fetch CSE and CSE-AIML
+        .in('code', ['CSE', 'CSE-AIML']) // Using .in() to match both branch codes
         .order('name');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching branches:', error);
+        throw error;
+      }
       return data;
     },
   });
