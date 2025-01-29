@@ -123,14 +123,32 @@ const AdminDashboard = () => {
     }
   };
 
+  const verifyPaperExists = async (fileUrl: string) => {
+    try {
+      const fileName = fileUrl.split('/').pop();
+      if (!fileName) return false;
+
+      const { data, error } = await supabase.storage
+        .from('question-papers')
+        .list('', {
+          search: fileName
+        });
+
+      if (error) {
+        console.error('Error checking file existence:', error);
+        return false;
+      }
+
+      return data.some(file => file.name === fileName);
+    } catch (error) {
+      console.error('Error verifying paper:', error);
+      return false;
+    }
+  };
+
   const fetchDashboardData = async () => {
     try {
-      const { count: papersCount } = await supabase
-        .from('papers')
-        .select('*', { count: 'exact' });
-
-      // Add logging to see what data we're getting
-      console.log('Fetching papers data...');
+      setIsLoading(true);
       
       const { data: papersData, error: papersError } = await supabase
         .from('papers')
@@ -147,29 +165,32 @@ const AdminDashboard = () => {
         throw papersError;
       }
 
-      // Log the retrieved data for debugging
-      console.log('Retrieved papers data:', papersData);
+      // Verify each paper exists in storage
+      const validPapers = await Promise.all(
+        (papersData || []).map(async (paper) => {
+          const exists = await verifyPaperExists(paper.file_url);
+          return exists ? paper : null;
+        })
+      );
 
-      setStats({
-        totalPapers: papersCount || 0,
-        totalDownloads: 0,
-        branchWiseDownloads: [],
-        monthlyActivity: []
-      });
+      // Filter out null values and group by exam type
+      const groupedPapers = validPapers
+        .filter((paper): paper is Paper => paper !== null)
+        .reduce((acc, paper) => {
+          const examType = paper.exam_types?.name || 'Unknown';
+          if (!acc[examType]) {
+            acc[examType] = [];
+          }
+          acc[examType].push(paper);
+          return acc;
+        }, {} as PapersByExamType);
 
-      // Group papers by exam type with additional logging
-      const groupedPapers = (papersData || []).reduce((acc, paper) => {
-        const examType = paper.exam_types?.name || 'Unknown';
-        if (!acc[examType]) {
-          acc[examType] = [];
-        }
-        acc[examType].push(paper);
-        console.log(`Adding paper to ${examType}:`, paper);
-        return acc;
-      }, {});
-
-      console.log('Grouped papers:', groupedPapers);
       setPapers(groupedPapers);
+      setStats(prev => ({
+        ...prev,
+        totalPapers: Object.values(groupedPapers).flat().length
+      }));
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
