@@ -558,14 +558,15 @@ const AdminDashboard = () => {
                         <TableCell>{paper.semesters?.number}</TableCell>
                         <TableCell>{paper.year}</TableCell>
                         <TableCell className="space-x-2">
-                          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                          <Dialog>
                             <DialogTrigger asChild>
                               <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={() => setEditData(paper)}
+                                className="hover:bg-gray-100"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-4 w-4 text-gray-600" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
@@ -644,8 +645,9 @@ const AdminDashboard = () => {
                             variant="outline"
                             size="icon"
                             onClick={() => handleDelete(paper.id)}
+                            className="hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </TableCell>
                       </TableRow>
