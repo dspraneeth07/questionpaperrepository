@@ -16,7 +16,10 @@ const Index = () => {
         .select('*')
         .order('name');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching branches:', error);
+        throw error;
+      }
       return data;
     },
   });
@@ -68,8 +71,8 @@ const Index = () => {
                             <Building2 className="h-6 w-6 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg text-gray-900">{branch.name}</h3>
-                            <p className="text-sm text-gray-500">{branch.code}</p>
+                            <h3 className="font-semibold text-lg text-gray-900">Computer Science Branches</h3>
+                            <p className="text-sm text-gray-500">CSE & CSE-AIML</p>
                           </div>
                         </div>
                         <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
