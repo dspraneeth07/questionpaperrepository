@@ -47,6 +47,7 @@ interface Paper {
   year: number;
   file_url: string;
   created_at: string;
+  subject_name: string | null;
   branches: { 
     name: string;
     code: string;
