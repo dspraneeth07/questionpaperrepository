@@ -82,7 +82,7 @@ const BranchSemesters = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {semesters?.map((semester) => (
             <Link 
-              to={`/branch/${branchCode}/year/${year}/semester/${semester.number}`} 
+              to={`/branch/${branchCode}/year/${year}/semester/${semester.number}/papers`} 
               key={semester.id}
             >
               <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">

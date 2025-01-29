@@ -15,14 +15,13 @@ import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
 const ExamPapers = () => {
-  const { branchCode, year, semester, examType } = useParams();
+  const { branchCode, year, semester } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [validPapers, setValidPapers] = useState<any[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Create new plugin instance
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   const semesterNumber = parseInt(semester || '0', 10);
@@ -37,8 +36,8 @@ const ExamPapers = () => {
     return null;
   }
 
-  if (!branchCode || !examType) {
-    console.error('Missing required parameters:', { branchCode, examType });
+  if (!branchCode) {
+    console.error('Missing required parameters:', { branchCode });
     toast({
       variant: "destructive",
       title: "Missing Parameters",
@@ -85,32 +84,8 @@ const ExamPapers = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
-  const { data: examTypeDetails } = useQuery({
-    queryKey: ['examType', examType],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('exam_types')
-          .select('*')
-          .eq('code', examType)
-          .maybeSingle();
-        
-        if (error) throw error;
-        return data;
-      } catch (error) {
-        console.error('Error fetching exam type:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch exam type details",
-        });
-        throw error;
-      }
-    },
-  });
-
-  const { data: papers, isLoading, refetch } = useQuery({
-    queryKey: ['papers', branchCode, year, semesterNumber, examType],
+  const { data: papers, isLoading } = useQuery({
+    queryKey: ['papers', branchCode, year, semesterNumber],
     queryFn: async () => {
       try {
         const branchResult = await supabase
@@ -126,21 +101,6 @@ const ExamPapers = () => {
             description: "Branch not found",
           });
           throw new Error('Branch not found');
-        }
-
-        const examTypeResult = await supabase
-          .from('exam_types')
-          .select('id')
-          .eq('code', examType)
-          .single();
-        
-        if (examTypeResult.error) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Exam type not found",
-          });
-          throw new Error('Exam type not found');
         }
 
         const semesterResult = await supabase
@@ -167,7 +127,6 @@ const ExamPapers = () => {
             semesters(*)
           `)
           .eq('branch_id', branchResult.data.id)
-          .eq('exam_type_id', examTypeResult.data.id)
           .eq('semester_id', semesterResult.data.id)
           .eq('year', parseInt(year || '0', 10));
         
@@ -349,8 +308,7 @@ const ExamPapers = () => {
             { label: "Home", path: "/" },
             { label: branch?.name || branchCode || "", path: `/branch/${branchCode}` },
             { label: year || "", path: `/branch/${branchCode}/year/${year}` },
-            { label: `Semester ${semester}`, path: `/branch/${branchCode}/year/${year}/semester/${semester}` },
-            { label: examTypeDetails?.name || examType || "", path: `/branch/${branchCode}/year/${year}/semester/${semester}/exam-type/${examType}` },
+            { label: `Semester ${semester}`, path: `/branch/${branchCode}/year/${year}/semester/${semester}/papers` },
           ]}
         />
         
@@ -373,7 +331,7 @@ const ExamPapers = () => {
                         <h3 className="font-semibold text-lg text-gray-900 truncate max-w-[200px]" title={decodedFileName}>
                           {decodedFileName}
                         </h3>
-                        <p className="text-sm text-gray-500">{paper.year}</p>
+                        <p className="text-sm text-gray-500">{paper.exam_types.name} - {paper.year}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
