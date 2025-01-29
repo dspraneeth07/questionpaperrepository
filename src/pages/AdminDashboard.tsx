@@ -387,7 +387,16 @@ const AdminDashboard = () => {
         description: "Question paper deleted successfully",
       });
 
-      fetchDashboardData(); // Refresh the list after deletion
+      // Update the local state to remove the deleted paper
+      const updatedPapers: PapersByExamType = {};
+      Object.entries(papers).forEach(([examType, papersList]) => {
+        const filteredPapers = papersList.filter(p => p.id !== paperId);
+        if (filteredPapers.length > 0) {
+          updatedPapers[examType] = filteredPapers;
+        }
+      });
+      setPapers(updatedPapers);
+
     } catch (error) {
       console.error('Error deleting paper:', error);
       toast({
