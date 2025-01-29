@@ -182,6 +182,11 @@ const AdminDashboard = () => {
     }
   };
 
+  const sanitizeFileName = (fileName: string) => {
+    // Remove square brackets and other special characters
+    return fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
+  };
+
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -207,13 +212,13 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Use original filename instead of random number
-      const fileName = file.name;
-      console.log('Uploading file:', fileName);
+      // Sanitize the filename
+      const sanitizedFileName = sanitizeFileName(file.name);
+      console.log('Uploading file:', sanitizedFileName);
 
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
-        .upload(fileName, file, {
+        .upload(sanitizedFileName, file, {
           upsert: true // This will overwrite if file exists
         });
 
@@ -224,7 +229,7 @@ const AdminDashboard = () => {
 
       const { data: { publicUrl } } = supabase.storage
         .from('question-papers')
-        .getPublicUrl(fileName);
+        .getPublicUrl(sanitizedFileName);
 
       console.log('File uploaded successfully, public URL:', publicUrl);
 
@@ -280,7 +285,7 @@ const AdminDashboard = () => {
 
       if (file) {
         // Upload new file if provided
-        const fileName = file.name;
+        const fileName = sanitizeFileName(file.name);
         const { error: uploadError } = await supabase.storage
           .from('question-papers')
           .upload(fileName, file);
