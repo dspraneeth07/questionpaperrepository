@@ -336,8 +336,6 @@ const AdminDashboard = () => {
 
     try {
       setIsLoading(true);
-
-      // First get the paper details to get the file URL
       const { data: paper, error: fetchError } = await supabase
         .from('papers')
         .select('*')
@@ -351,7 +349,7 @@ const AdminDashboard = () => {
 
       // Extract filename from the URL
       const fileUrl = new URL(paper.file_url);
-      const filePath = fileUrl.pathname.split('/question-papers/').pop();
+      const filePath = decodeURIComponent(fileUrl.pathname.split('/question-papers/').pop() || '');
 
       if (!filePath) {
         throw new Error('Could not extract filename from URL');
@@ -366,8 +364,11 @@ const AdminDashboard = () => {
 
       if (storageError) {
         console.error('Storage deletion error:', storageError);
-        // Continue with database deletion even if storage deletion fails
-        // The file might not exist in storage but we still want to clean up the database
+        toast({
+          title: "Warning",
+          description: "Could not delete file from storage, but will remove database entry",
+          variant: "destructive",
+        });
       }
 
       // Delete the paper record from the database
