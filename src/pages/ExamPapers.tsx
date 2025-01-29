@@ -14,7 +14,6 @@ const ExamPapers = () => {
   const { toast } = useToast();
   const [validPapers, setValidPapers] = useState<any[]>([]);
 
-  // Validate URL parameters
   const semesterNumber = parseInt(semester || '0', 10);
   if (isNaN(semesterNumber)) {
     console.error('Invalid semester number:', semester);
@@ -38,7 +37,6 @@ const ExamPapers = () => {
     return null;
   }
 
-  // Query for branch details with retry
   const { data: branch } = useQuery({
     queryKey: ['branch', branchCode],
     queryFn: async () => {
@@ -100,7 +98,7 @@ const ExamPapers = () => {
     },
   });
 
-  const { data: papers, isLoading } = useQuery({
+  const { data: papers, isLoading, refetch } = useQuery({
     queryKey: ['papers', branchCode, year, semesterNumber, examType],
     queryFn: async () => {
       try {
@@ -177,7 +175,7 @@ const ExamPapers = () => {
     },
   });
 
-  // Check which papers actually exist in storage
+  // Check which papers actually exist in storage and database
   useEffect(() => {
     const checkPapersExistence = async () => {
       if (!papers) return;
@@ -189,6 +187,7 @@ const ExamPapers = () => {
         const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
         
         try {
+          // Check if file exists in storage
           const { data: fileExists } = await supabase
             .storage
             .from('question-papers')
@@ -196,11 +195,18 @@ const ExamPapers = () => {
               search: filename
             });
 
-          if (fileExists && fileExists.length > 0) {
+          // Check if paper still exists in database
+          const { data: paperExists } = await supabase
+            .from('papers')
+            .select('id')
+            .eq('id', paper.id)
+            .single();
+
+          if (fileExists && fileExists.length > 0 && paperExists) {
             validPapersArray.push(paper);
           }
         } catch (error) {
-          console.error('Error checking file existence:', error);
+          console.error('Error checking existence:', error);
         }
       }
       
