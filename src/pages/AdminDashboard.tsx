@@ -92,11 +92,13 @@ const AdminDashboard = () => {
     branch_id: "",
     semester_id: "",
     subject_name: "",
+    exam_type_id: "", // Added exam_type_id
     year: new Date().getFullYear(),
   });
   const [editData, setEditData] = useState<Paper | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
+  const [exam_types, setExamTypes] = useState<any[]>([]); // Added state for exam types
   const [file, setFile] = useState<File | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,6 +108,7 @@ const AdminDashboard = () => {
     checkAuth();
     fetchDashboardData();
     fetchMetadata();
+    fetchExamTypes(); // Fetch exam types
   }, []);
 
   useEffect(() => {
@@ -152,6 +155,21 @@ const AdminDashboard = () => {
       toast({
         title: "Error",
         description: "Failed to fetch metadata",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchExamTypes = async () => { // Fetch exam types from the database
+    try {
+      const { data, error } = await supabase.from('exam_types').select('*');
+      if (error) throw error;
+      setExamTypes(data || []);
+    } catch (error) {
+      console.error('Error fetching exam types:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch exam types",
         variant: "destructive",
       });
     }
@@ -281,10 +299,10 @@ const AdminDashboard = () => {
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name) {
+    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name || !uploadData.exam_type_id) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields including subject name",
+        description: "Please fill in all required fields including subject name and exam type",
         variant: "destructive",
       });
       return;
@@ -332,7 +350,7 @@ const AdminDashboard = () => {
         .insert({
           branch_id: parseInt(uploadData.branch_id),
           semester_id: parseInt(uploadData.semester_id),
-          exam_type_id: null,
+          exam_type_id: parseInt(uploadData.exam_type_id), // Now passing the exam_type_id
           year: uploadData.year,
           file_url: publicUrl,
           subject_name: uploadData.subject_name
@@ -355,6 +373,7 @@ const AdminDashboard = () => {
         branch_id: "",
         semester_id: "",
         subject_name: "",
+        exam_type_id: "", // Reset exam_type_id
         year: new Date().getFullYear(),
       });
     } catch (error) {
@@ -590,6 +609,25 @@ const AdminDashboard = () => {
                   max={new Date().getFullYear()}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="exam-type">Exam Type</Label>
+              <Select
+                value={uploadData.exam_type_id}
+                onValueChange={(value) => setUploadData(prev => ({ ...prev, exam_type_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Exam Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exam_types?.map((type) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
