@@ -80,6 +80,7 @@ export type Database = {
           file_url: string
           id: number
           semester_id: number
+          subject_name: string | null
           year: number
         }
         Insert: {
@@ -89,6 +90,7 @@ export type Database = {
           file_url: string
           id?: number
           semester_id: number
+          subject_name?: string | null
           year: number
         }
         Update: {
@@ -98,6 +100,7 @@ export type Database = {
           file_url?: string
           id?: number
           semester_id?: number
+          subject_name?: string | null
           year?: number
         }
         Relationships: [
