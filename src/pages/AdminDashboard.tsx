@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Pencil, Trash2, ArrowLeft, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,6 @@ interface Paper {
   id: number;
   branch_id: number;
   semester_id: number;
-  exam_type_id: number;
   year: number;
   file_url: string;
   created_at: string;
@@ -55,14 +54,6 @@ interface Paper {
   semesters: { 
     number: number;
   };
-  exam_types: { 
-    name: string;
-    code: string;
-  };
-}
-
-interface PapersByExamType {
-  [key: string]: Paper[];
 }
 
 interface Stats {
@@ -86,29 +77,26 @@ const AdminDashboard = () => {
     branchWiseDownloads: [],
     monthlyActivity: []
   });
-  const [papers, setPapers] = useState<PapersByExamType>({});
+  const [papers, setPapers] = useState<Paper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadData, setUploadData] = useState({
     branch_id: "",
     semester_id: "",
     subject_name: "",
-    exam_type_id: "", // Added exam_type_id
     year: new Date().getFullYear(),
   });
   const [editData, setEditData] = useState<Paper | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
-  const [exam_types, setExamTypes] = useState<any[]>([]); // Added state for exam types
   const [file, setFile] = useState<File | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredPapers, setFilteredPapers] = useState<PapersByExamType>({});
-  
+  const [filteredPapers, setFilteredPapers] = useState<Paper[]>([]);
+
   useEffect(() => {
     checkAuth();
     fetchDashboardData();
     fetchMetadata();
-    fetchExamTypes(); // Fetch exam types
   }, []);
 
   useEffect(() => {
@@ -117,17 +105,10 @@ const AdminDashboard = () => {
       return;
     }
 
-    const filtered: PapersByExamType = {};
-    Object.entries(papers).forEach(([examType, papersList]) => {
-      const matchingPapers = papersList.filter(paper => {
-        const searchTerms = searchQuery.toLowerCase().split(" ");
-        const paperString = `${paper.branches.name} ${paper.semesters.number} ${paper.exam_types.name} ${paper.year}`.toLowerCase();
-        return searchTerms.every(term => paperString.includes(term));
-      });
-
-      if (matchingPapers.length > 0) {
-        filtered[examType] = matchingPapers;
-      }
+    const filtered = papers.filter(paper => {
+      const searchTerms = searchQuery.toLowerCase().split(" ");
+      const paperString = `${paper.branches.name} ${paper.semesters.number} ${paper.subject_name} ${paper.year}`.toLowerCase();
+      return searchTerms.every(term => paperString.includes(term));
     });
 
     setFilteredPapers(filtered);
@@ -160,137 +141,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchExamTypes = async () => { // Fetch exam types from the database
-    try {
-      const { data, error } = await supabase.from('exam_types').select('*');
-      if (error) throw error;
-      setExamTypes(data || []);
-    } catch (error) {
-      console.error('Error fetching exam types:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch exam types",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const verifyPaperExists = async (fileUrl: string) => {
-    try {
-      const fileName = decodeURIComponent(fileUrl.split('/').pop() || '');
-      if (!fileName) return false;
-
-      console.log('Verifying paper existence:', fileName);
-
-      const { data, error } = await supabase.storage
-        .from('question-papers')
-        .list('', {
-          search: fileName,
-          limit: 1
-        });
-
-      if (error) {
-        console.error('Error checking file existence:', error);
-        return false;
-      }
-
-      const exists = data.some(file => file.name === fileName);
-      console.log('Paper exists:', exists);
-      return exists;
-    } catch (error) {
-      console.error('Error verifying paper:', error);
-      return false;
-    }
-  };
-
-  const generateMonthlyActivity = (papers: Paper[]): MonthlyActivity[] => {
-    const now = new Date();
-    const monthsAgo = new Date(now.setMonth(now.getMonth() - 11)); // Last 12 months
-    
-    const months: MonthlyActivity[] = [];
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(monthsAgo.setMonth(monthsAgo.getMonth() + 1));
-      months.push({
-        month: date.toLocaleString('default', { month: 'short' }),
-        uploads: 0
-      });
-    }
-
-    papers.forEach(paper => {
-      const paperDate = new Date(paper.created_at);
-      const monthIndex = months.findIndex(m => 
-        m.month === paperDate.toLocaleString('default', { month: 'short' })
-      );
-      if (monthIndex !== -1) {
-        months[monthIndex].uploads++;
-      }
-    });
-
-    return months;
-  };
-
-  const fetchDashboardData = async () => {
-    try {
-      setIsLoading(true);
-      
-      const { data: papersData, error: papersError } = await supabase
-        .from('papers')
-        .select(`
-          *,
-          branches:branch_id(name, code),
-          semesters:semester_id(number),
-          exam_types:exam_type_id(name, code)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (papersError) {
-        console.error('Error fetching papers:', papersError);
-        throw papersError;
-      }
-
-      const validPapersPromises = (papersData || []).map(async (paper) => {
-        const exists = await verifyPaperExists(paper.file_url);
-        return exists ? paper : null;
-      });
-
-      const validPapersResults = await Promise.all(validPapersPromises);
-      const validPapers = validPapersResults.filter((paper): paper is Paper => 
-        paper !== null && paper.created_at !== undefined
-      );
-
-      const groupedPapers = validPapers.reduce((acc, paper) => {
-        const examType = paper.exam_types?.name || 'Unknown';
-        if (!acc[examType]) {
-          acc[examType] = [];
-        }
-        acc[examType].push(paper);
-        return acc;
-      }, {} as PapersByExamType);
-
-      console.log('Grouped papers:', groupedPapers);
-      setPapers(groupedPapers);
-      setFilteredPapers(groupedPapers);
-
-      const monthlyActivity = generateMonthlyActivity(validPapers);
-      
-      setStats(prev => ({
-        ...prev,
-        totalPapers: validPapers.length,
-        monthlyActivity
-      }));
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const sanitizeFileName = (fileName: string) => {
     const cleanName = fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
     return cleanName.toLowerCase();
@@ -299,10 +149,10 @@ const AdminDashboard = () => {
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name || !uploadData.exam_type_id) {
+    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields including subject name and exam type",
+        description: "Please fill in all required fields including subject name",
         variant: "destructive",
       });
       return;
@@ -350,7 +200,6 @@ const AdminDashboard = () => {
         .insert({
           branch_id: parseInt(uploadData.branch_id),
           semester_id: parseInt(uploadData.semester_id),
-          exam_type_id: parseInt(uploadData.exam_type_id), // Now passing the exam_type_id
           year: uploadData.year,
           file_url: publicUrl,
           subject_name: uploadData.subject_name
@@ -373,7 +222,6 @@ const AdminDashboard = () => {
         branch_id: "",
         semester_id: "",
         subject_name: "",
-        exam_type_id: "", // Reset exam_type_id
         year: new Date().getFullYear(),
       });
     } catch (error) {
@@ -417,7 +265,6 @@ const AdminDashboard = () => {
         .update({
           branch_id: editData.branch_id,
           semester_id: editData.semester_id,
-          exam_type_id: editData.exam_type_id,
           year: editData.year,
           file_url: fileUrl,
           subject_name: editData.subject_name // Update subject name
@@ -498,13 +345,7 @@ const AdminDashboard = () => {
         description: "Question paper deleted successfully",
       });
 
-      const updatedPapers: PapersByExamType = {};
-      Object.entries(papers).forEach(([examType, papersList]) => {
-        const filteredPapers = papersList.filter(p => p.id !== paperId);
-        if (filteredPapers.length > 0) {
-          updatedPapers[examType] = filteredPapers;
-        }
-      });
+      const updatedPapers: Paper[] = papers.filter(p => p.id !== paperId);
       setPapers(updatedPapers);
 
       setStats(prevStats => ({
@@ -522,6 +363,71 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data: papersData, error: papersError } = await supabase
+        .from('papers')
+        .select(`
+          *,
+          branches:branch_id(name, code),
+          semesters:semester_id(number)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (papersError) throw papersError;
+
+      const validPapers = papersData || [];
+      setPapers(validPapers);
+      setFilteredPapers(validPapers);
+
+      const monthlyActivity = generateMonthlyActivity(validPapers);
+      
+      setStats(prev => ({
+        ...prev,
+        totalPapers: validPapers.length,
+        monthlyActivity
+      }));
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateMonthlyActivity = (papers: Paper[]): MonthlyActivity[] => {
+    const now = new Date();
+    const monthsAgo = new Date(now.setMonth(now.getMonth() - 11)); // Last 12 months
+    
+    const months: MonthlyActivity[] = [];
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(monthsAgo.setMonth(monthsAgo.getMonth() + 1));
+      months.push({
+        month: date.toLocaleString('default', { month: 'short' }),
+        uploads: 0
+      });
+    }
+
+    papers.forEach(paper => {
+      const paperDate = new Date(paper.created_at);
+      const monthIndex = months.findIndex(m => 
+        m.month === paperDate.toLocaleString('default', { month: 'short' })
+      );
+      if (monthIndex !== -1) {
+        months[monthIndex].uploads++;
+      }
+    });
+
+    return months;
   };
 
   if (isLoading) {
@@ -612,25 +518,6 @@ const AdminDashboard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="exam-type">Exam Type</Label>
-              <Select
-                value={uploadData.exam_type_id}
-                onValueChange={(value) => setUploadData(prev => ({ ...prev, exam_type_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Exam Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exam_types?.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="file">Question Paper (PDF)</Label>
               <Input
                 id="file"
@@ -681,144 +568,147 @@ const AdminDashboard = () => {
 
         {/* Search Bar */}
         <div className="mb-6">
-          <Input
-            type="search"
-            placeholder="Search papers by branch, semester, or year..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search papers by branch, semester, subject or year..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 max-w-md"
+            />
+          </div>
         </div>
 
-        {/* Papers Table - Now Grouped by Exam Type */}
+        {/* Papers Table */}
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-4">Question Papers</h3>
-          {Object.entries(filteredPapers).map(([examType, papersList]) => (
-            <div key={examType} className="mb-8">
-              <h4 className="text-md font-medium mb-4">{examType}</h4>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Document Name</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Semester</TableHead>
-                      <TableHead>Year</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {papersList.map((paper: any) => {
-                      const fileName = decodeURIComponent(paper.file_url.split('/').pop() || 'Unnamed Paper');
-                      return (
-                        <TableRow key={paper.id}>
-                          <TableCell className="max-w-xs truncate" title={fileName}>
-                            {fileName}
-                          </TableCell>
-                          <TableCell>{paper.branches?.name}</TableCell>
-                          <TableCell>{paper.semesters?.number}</TableCell>
-                          <TableCell>{paper.year}</TableCell>
-                          <TableCell className="space-x-2">
-                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => setEditData(paper)}
-                                  className="hover:bg-gray-100"
-                                >
-                                  <Pencil className="h-4 w-4 text-gray-600" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit Question Paper</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleEdit} className="space-y-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="edit-branch">Branch</Label>
-                                    <Select
-                                      value={editData?.branch_id.toString()}
-                                      onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: parseInt(value) }))}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select Branch" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {branches.map((branch) => (
-                                          <SelectItem key={branch.id} value={branch.id.toString()}>
-                                            {branch.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Subject Name</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Semester</TableHead>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPapers.map((paper: Paper) => (
+                  <TableRow key={paper.id}>
+                    <TableCell className="font-medium">{paper.subject_name || 'Unnamed'}</TableCell>
+                    <TableCell>{paper.branches?.name}</TableCell>
+                    <TableCell>{paper.semesters?.number}</TableCell>
+                    <TableCell>{paper.year}</TableCell>
+                    <TableCell className="space-x-2">
+                      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setEditData(paper)}
+                            className="hover:bg-gray-100"
+                          >
+                            <Pencil className="h-4 w-4 text-gray-600" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Question Paper</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleEdit} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-branch">Branch</Label>
+                              <Select
+                                value={editData?.branch_id.toString()}
+                                onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: parseInt(value) }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Branch" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {branches.map((branch) => (
+                                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                                      {branch.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                                  <div className="space-y-2">
-                                    <Label htmlFor="edit-semester">Semester</Label>
-                                    <Select
-                                      value={editData?.semester_id.toString()}
-                                      onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: parseInt(value) }))}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select Semester" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {semesters.map((semester) => (
-                                          <SelectItem key={semester.id} value={semester.id.toString()}>
-                                            {semester.number}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-semester">Semester</Label>
+                              <Select
+                                value={editData?.semester_id.toString()}
+                                onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: parseInt(value) }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Semester" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {semesters.map((semester) => (
+                                    <SelectItem key={semester.id} value={semester.id.toString()}>
+                                      {semester.number}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                                  <div className="space-y-2">
-                                    <Label htmlFor="edit-year">Year</Label>
-                                    <Input
-                                      id="edit-year"
-                                      type="number"
-                                      value={editData?.year}
-                                      onChange={(e) => setEditData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                                      min={2000}
-                                      max={new Date().getFullYear()}
-                                    />
-                                  </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-subject">Subject Name</Label>
+                              <Input
+                                id="edit-subject"
+                                value={editData?.subject_name || ''}
+                                onChange={(e) => setEditData(prev => ({ ...prev, subject_name: e.target.value }))}
+                                placeholder="Enter subject name"
+                              />
+                            </div>
 
-                                  <div className="space-y-2">
-                                    <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
-                                    <Input
-                                      id="edit-file"
-                                      type="file"
-                                      accept=".pdf"
-                                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                    />
-                                  </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-year">Year</Label>
+                              <Input
+                                id="edit-year"
+                                type="number"
+                                value={editData?.year}
+                                onChange={(e) => setEditData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                                min={2000}
+                                max={new Date().getFullYear()}
+                              />
+                            </div>
 
-                                  <Button type="submit" disabled={isLoading}>
-                                    {isLoading ? "Updating..." : "Update Question Paper"}
-                                  </Button>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
+                              <Input
+                                id="edit-file"
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                              />
+                            </div>
 
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleDelete(paper.id)}
-                              className="hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                            <Button type="submit" disabled={isLoading}>
+                              {isLoading ? "Updating..." : "Update Question Paper"}
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          ))}
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDelete(paper.id)}
+                        className="hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       </div>
     </div>
