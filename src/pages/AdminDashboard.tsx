@@ -406,6 +406,7 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
+      // First get all papers from the database
       const { data: papersData, error: papersError } = await supabase
         .from('papers')
         .select(`
@@ -420,18 +421,49 @@ const AdminDashboard = () => {
         throw papersError;
       }
 
-      const validPapers = papersData || [];
-      setPapers(validPapers);
-      setFilteredPapers(validPapers);
-
-      const monthlyActivity = generateMonthlyActivity(validPapers);
+      // Verify each paper exists in storage before adding it to the valid papers list
+      const validPapersArray = [];
       
-      // Set the total papers count based on actual number of papers
-      setStats(prev => ({
-        ...prev,
-        totalPapers: validPapers.length,
+      if (papersData) {
+        for (const paper of papersData) {
+          const urlParts = paper.file_url.split('/');
+          const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
+          
+          try {
+            const { data: fileExists } = await supabase
+              .storage
+              .from('question-papers')
+              .list('', {
+                search: filename
+              });
+
+            if (fileExists && fileExists.length > 0) {
+              validPapersArray.push(paper);
+            } else {
+              // If file doesn't exist in storage, remove it from the database
+              await supabase
+                .from('papers')
+                .delete()
+                .eq('id', paper.id);
+            }
+          } catch (error) {
+            console.error('Error checking file existence:', error);
+          }
+        }
+      }
+
+      setPapers(validPapersArray);
+      setFilteredPapers(validPapersArray);
+
+      const monthlyActivity = generateMonthlyActivity(validPapersArray);
+      
+      // Update stats with accurate paper count
+      setStats({
+        totalPapers: validPapersArray.length,
+        totalDownloads: 0, // Keep existing value
+        branchWiseDownloads: [], // Keep existing value
         monthlyActivity
-      }));
+      });
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
