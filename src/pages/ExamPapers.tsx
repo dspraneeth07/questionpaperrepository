@@ -110,13 +110,13 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract the original filename from the URL
+      // Extract the filename from the URL
       const urlParts = fileUrl.split('/');
       const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
 
       console.log('Attempting to download file:', filename);
 
-      // Download the file directly using the filename
+      // Try to download the file
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -124,7 +124,13 @@ const ExamPapers = () => {
 
       if (error) {
         console.error('Storage error:', error);
-        throw error;
+        // Show a more user-friendly error message
+        toast({
+          variant: "destructive",
+          title: "Download failed",
+          description: "This file was uploaded in an old format and is no longer accessible. Please contact the administrator to re-upload the file.",
+        });
+        return;
       }
 
       if (!data) {
@@ -135,7 +141,7 @@ const ExamPapers = () => {
       const url = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename; // Use original filename for download
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
