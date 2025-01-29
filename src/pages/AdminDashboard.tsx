@@ -95,7 +95,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     checkAuth();
-    fetchDashboardData();
+    fetchDashboardData(); // Fetch fresh data when component mounts
     fetchMetadata();
   }, []);
 
@@ -302,7 +302,7 @@ const AdminDashboard = () => {
       });
 
       setIsEditDialogOpen(false);
-      fetchDashboardData();
+      await fetchDashboardData();
     } catch (error) {
       console.error('Error updating paper:', error);
       toast({
@@ -368,13 +368,8 @@ const AdminDashboard = () => {
         description: "Question paper deleted successfully",
       });
 
-      const updatedPapers: Paper[] = papers.filter(p => p.id !== paperId);
-      setPapers(updatedPapers);
-
-      setStats(prevStats => ({
-        ...prevStats,
-        totalPapers: prevStats.totalPapers - 1
-      }));
+      // Refresh the dashboard data after successful deletion
+      await fetchDashboardData();
 
     } catch (error) {
       console.error('Error deleting paper:', error);
@@ -401,7 +396,10 @@ const AdminDashboard = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (papersError) throw papersError;
+      if (papersError) {
+        console.error('Error fetching papers:', papersError);
+        throw papersError;
+      }
 
       const validPapers = papersData || [];
       setPapers(validPapers);
