@@ -24,6 +24,16 @@ const Index = () => {
     },
   });
 
+  // Filter out CSE branches for separate handling
+  const nonCSEBranches = branches?.filter(
+    branch => !['CSE', 'CSE-AIML'].includes(branch.code)
+  );
+
+  // Check if we have any CSE branches
+  const hasCSEBranches = branches?.some(
+    branch => ['CSE', 'CSE-AIML'].includes(branch.code)
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -59,49 +69,45 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {branches?.map((branch) => {
-              // Special handling for CSE branches
-              if (branch.code === 'CSE' || branch.code === 'CSE-AIML') {
-                return (
-                  <Link to="/cse-branches" key={branch.id}>
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                            <Building2 className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg text-gray-900">Computer Science Branches</h3>
-                            <p className="text-sm text-gray-500">CSE & CSE-AIML</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
+            {/* CSE Branches Card - Only show if we have CSE branches */}
+            {hasCSEBranches && (
+              <Link to="/cse-branches">
+                <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                        <Building2 className="h-6 w-6 text-primary" />
                       </div>
-                    </Card>
-                  </Link>
-                );
-              }
-              
-              // Other branches link directly to their years page
-              return (
-                <Link to={`/branch/${branch.code}`} key={branch.id}>
-                  <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                          <Building2 className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg text-gray-900">{branch.name}</h3>
-                          <p className="text-sm text-gray-500">{branch.code}</p>
-                        </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900">Computer Science Branches</h3>
+                        <p className="text-sm text-gray-500">CSE & CSE-AIML</p>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
                     </div>
-                  </Card>
-                </Link>
-              );
-            })}
+                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
+                  </div>
+                </Card>
+              </Link>
+            )}
+            
+            {/* Other Branches */}
+            {nonCSEBranches?.map((branch) => (
+              <Link to={`/branch/${branch.code}`} key={branch.id}>
+                <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900">{branch.name}</h3>
+                        <p className="text-sm text-gray-500">{branch.code}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
+                  </div>
+                </Card>
+              </Link>
+            ))}
           </div>
         )}
       </main>
