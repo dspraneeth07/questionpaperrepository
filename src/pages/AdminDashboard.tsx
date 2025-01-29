@@ -207,20 +207,15 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Log upload data for debugging
-      console.log('Uploading file with data:', {
-        branch_id: uploadData.branch_id,
-        semester_id: uploadData.semester_id,
-        exam_type_id: uploadData.exam_type_id,
-        year: uploadData.year
-      });
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      // Use original filename instead of random number
+      const fileName = file.name;
+      console.log('Uploading file:', fileName);
 
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          upsert: true // This will overwrite if file exists
+        });
 
       if (uploadError) {
         console.error('File upload error:', uploadError);
@@ -231,7 +226,6 @@ const AdminDashboard = () => {
         .from('question-papers')
         .getPublicUrl(fileName);
 
-      // Log the public URL for debugging
       console.log('File uploaded successfully, public URL:', publicUrl);
 
       const { error: dbError } = await supabase
@@ -254,7 +248,6 @@ const AdminDashboard = () => {
         description: "Question paper uploaded successfully",
       });
 
-      // Immediately fetch updated data
       await fetchDashboardData();
       
       setFile(null);
@@ -287,9 +280,7 @@ const AdminDashboard = () => {
 
       if (file) {
         // Upload new file if provided
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-
+        const fileName = file.name;
         const { error: uploadError } = await supabase.storage
           .from('question-papers')
           .upload(fileName, file);

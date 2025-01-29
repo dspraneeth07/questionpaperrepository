@@ -8,8 +8,6 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// ... keep existing code (interfaces and type definitions)
-
 const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
   const navigate = useNavigate();
@@ -112,35 +110,13 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Extract just the filename from the end of the URL
+      // Extract the original filename from the URL
       const urlParts = fileUrl.split('/');
-      const filename = urlParts[urlParts.length - 1];
-
-      if (!filename) {
-        throw new Error('Invalid file URL format');
-      }
+      const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
 
       console.log('Attempting to download file:', filename);
 
-      // First check if the file exists
-      const { data: fileExists, error: listError } = await supabase
-        .storage
-        .from('question-papers')
-        .list('', {
-          limit: 1,
-          search: filename
-        });
-
-      if (listError) {
-        console.error('Error checking file existence:', listError);
-        throw new Error('Failed to verify file existence');
-      }
-
-      if (!fileExists || fileExists.length === 0) {
-        throw new Error('File not found in storage');
-      }
-
-      // Download the file using the correct path
+      // Download the file directly using the filename
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -155,13 +131,11 @@ const ExamPapers = () => {
         throw new Error('No file data received');
       }
 
-      // Create a URL for the blob
+      // Create a URL for the blob and trigger download
       const url = window.URL.createObjectURL(data);
-      
-      // Create a temporary link and trigger download
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename;
+      link.download = filename; // Use original filename for download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
