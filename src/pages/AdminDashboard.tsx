@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ArrowLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
     checkAuth();
     fetchDashboardData();
     fetchMetadata();
-  }, [navigate]);
+  }, []);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -138,13 +138,17 @@ const AdminDashboard = () => {
 
   const verifyPaperExists = async (fileUrl: string) => {
     try {
-      const fileName = fileUrl.split('/').pop();
+      // Extract the filename from the URL
+      const fileName = decodeURIComponent(fileUrl.split('/').pop() || '');
       if (!fileName) return false;
+
+      console.log('Verifying paper existence:', fileName);
 
       const { data, error } = await supabase.storage
         .from('question-papers')
         .list('', {
-          search: fileName
+          search: fileName,
+          limit: 1
         });
 
       if (error) {
@@ -152,7 +156,9 @@ const AdminDashboard = () => {
         return false;
       }
 
-      return data.some(file => file.name === fileName);
+      const exists = data.some(file => file.name === fileName);
+      console.log('Paper exists:', exists);
+      return exists;
     } catch (error) {
       console.error('Error verifying paper:', error);
       return false;
@@ -207,33 +213,35 @@ const AdminDashboard = () => {
       }
 
       // Verify each paper exists in storage
-      const validPapers = await Promise.all(
-        (papersData || []).map(async (paper) => {
-          const exists = await verifyPaperExists(paper.file_url);
-          return exists ? paper : null;
-        })
+      const validPapersPromises = (papersData || []).map(async (paper) => {
+        const exists = await verifyPaperExists(paper.file_url);
+        return exists ? paper : null;
+      });
+
+      const validPapersResults = await Promise.all(validPapersPromises);
+      const validPapers = validPapersResults.filter((paper): paper is Paper => 
+        paper !== null && paper.created_at !== undefined
       );
 
-      // Filter out null values and group by exam type
-      const groupedPapers = validPapers
-        .filter((paper): paper is Paper => paper !== null && paper.created_at !== undefined)
-        .reduce((acc, paper) => {
-          const examType = paper.exam_types?.name || 'Unknown';
-          if (!acc[examType]) {
-            acc[examType] = [];
-          }
-          acc[examType].push(paper);
-          return acc;
-        }, {} as PapersByExamType);
+      // Group valid papers by exam type
+      const groupedPapers = validPapers.reduce((acc, paper) => {
+        const examType = paper.exam_types?.name || 'Unknown';
+        if (!acc[examType]) {
+          acc[examType] = [];
+        }
+        acc[examType].push(paper);
+        return acc;
+      }, {} as PapersByExamType);
 
+      console.log('Grouped papers:', groupedPapers);
       setPapers(groupedPapers);
 
       // Generate monthly activity data
-      const monthlyActivity = generateMonthlyActivity(validPapers.filter((p): p is Paper => p !== null));
+      const monthlyActivity = generateMonthlyActivity(validPapers);
       
       setStats(prev => ({
         ...prev,
-        totalPapers: Object.values(groupedPapers).flat().length,
+        totalPapers: validPapers.length,
         monthlyActivity
       }));
 
@@ -487,14 +495,17 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <Link 
-            to="/" 
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <Pencil className="h-5 w-5 mr-2" />
-            Back to Home
-          </Link>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          </div>
         </div>
 
         {/* Upload Section */}
@@ -640,16 +651,17 @@ const AdminDashboard = () => {
                   </TableHeader>
                   <TableBody>
                     {papersList.map((paper: any) => {
-                      const fileName = paper.file_url.split('/').pop() || 'Unnamed Paper';
-                      const decodedFileName = decodeURIComponent(fileName);
+                      const fileName = decodeURIComponent(paper.file_url.split('/').pop() || 'Unnamed Paper');
                       return (
                         <TableRow key={paper.id}>
-                          <TableCell title={decodedFileName}>{decodedFileName}</TableCell>
+                          <TableCell className="max-w-xs truncate" title={fileName}>
+                            {fileName}
+                          </TableCell>
                           <TableCell>{paper.branches?.name}</TableCell>
                           <TableCell>{paper.semesters?.number}</TableCell>
                           <TableCell>{paper.year}</TableCell>
                           <TableCell className="space-x-2">
-                            <Dialog>
+                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                               <DialogTrigger asChild>
                                 <Button
                                   variant="outline"
