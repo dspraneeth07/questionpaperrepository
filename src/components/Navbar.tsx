@@ -22,7 +22,7 @@ export const Navbar = () => {
             branches:branch_id(name, code),
             semesters:semester_id(number)
           `)
-          .or(`subject_name.ilike.%${query}%,branches(name).ilike.%${query}%`)
+          .or(`subject_name.ilike.%${query}%,branches.name.ilike.%${query}%`)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -35,7 +35,6 @@ export const Navbar = () => {
           return;
         }
 
-        // You can handle the search results here
         console.log('Search results:', data);
       } catch (error) {
         console.error('Search error:', error);
