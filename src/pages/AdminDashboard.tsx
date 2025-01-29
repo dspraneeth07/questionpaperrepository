@@ -369,13 +369,14 @@ const AdminDashboard = () => {
         throw deleteError;
       }
 
+      // Update local state to remove the deleted paper
+      setPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
+      setFilteredPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
+
       toast({
         title: "Success",
         description: "Question paper deleted successfully",
       });
-
-      // Refresh the dashboard data after successful deletion
-      await fetchDashboardData();
 
     } catch (error) {
       console.error('Error deleting paper:', error);
