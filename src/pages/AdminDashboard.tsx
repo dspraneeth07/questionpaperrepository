@@ -172,14 +172,25 @@ const AdminDashboard = () => {
       }
 
       // Get default exam type (End Semester)
-      const { data: examType } = await supabase
+      const { data: examType, error: examTypeError } = await supabase
         .from('exam_types')
         .select('id')
         .eq('code', 'END_SEM')
-        .single();
+        .maybeSingle();
+
+      if (examTypeError) {
+        console.error('Error fetching exam type:', examTypeError);
+        throw new Error('Failed to fetch exam type');
+      }
 
       if (!examType) {
-        throw new Error('Default exam type not found');
+        console.error('No default exam type found');
+        toast({
+          title: "Error",
+          description: "System configuration error: Default exam type not found. Please contact support.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const fileExt = file.name.split('.').pop() || 'pdf';
@@ -214,7 +225,7 @@ const AdminDashboard = () => {
           year: uploadData.year,
           file_url: publicUrl,
           subject_name: uploadData.subject_name,
-          exam_type_id: examType.id  // Add the default exam type ID
+          exam_type_id: examType.id
         });
 
       if (dbError) {
