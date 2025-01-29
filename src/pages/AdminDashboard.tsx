@@ -39,7 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Updated Paper interface to match Supabase response
 interface Paper {
   id: number;
   branch_id: number;
@@ -91,21 +90,44 @@ const AdminDashboard = () => {
   const [uploadData, setUploadData] = useState({
     branch_id: "",
     semester_id: "",
-    exam_type_id: "",
+    subject_name: "",
     year: new Date().getFullYear(),
   });
   const [editData, setEditData] = useState<Paper | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
-  const [examTypes, setExamTypes] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredPapers, setFilteredPapers] = useState<PapersByExamType>({});
+  
   useEffect(() => {
     checkAuth();
     fetchDashboardData();
     fetchMetadata();
   }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredPapers(papers);
+      return;
+    }
+
+    const filtered: PapersByExamType = {};
+    Object.entries(papers).forEach(([examType, papersList]) => {
+      const matchingPapers = papersList.filter(paper => {
+        const searchTerms = searchQuery.toLowerCase().split(" ");
+        const paperString = `${paper.branches.name} ${paper.semesters.number} ${paper.exam_types.name} ${paper.year}`.toLowerCase();
+        return searchTerms.every(term => paperString.includes(term));
+      });
+
+      if (matchingPapers.length > 0) {
+        filtered[examType] = matchingPapers;
+      }
+    });
+
+    setFilteredPapers(filtered);
+  }, [searchQuery, papers]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -117,15 +139,13 @@ const AdminDashboard = () => {
 
   const fetchMetadata = async () => {
     try {
-      const [branchesRes, semestersRes, examTypesRes] = await Promise.all([
+      const [branchesRes, semestersRes] = await Promise.all([
         supabase.from('branches').select('*'),
         supabase.from('semesters').select('*'),
-        supabase.from('exam_types').select('*')
       ]);
 
       setBranches(branchesRes.data || []);
       setSemesters(semestersRes.data || []);
-      setExamTypes(examTypesRes.data || []);
     } catch (error) {
       console.error('Error fetching metadata:', error);
       toast({
@@ -138,7 +158,6 @@ const AdminDashboard = () => {
 
   const verifyPaperExists = async (fileUrl: string) => {
     try {
-      // Extract the filename from the URL
       const fileName = decodeURIComponent(fileUrl.split('/').pop() || '');
       if (!fileName) return false;
 
@@ -169,7 +188,6 @@ const AdminDashboard = () => {
     const now = new Date();
     const monthsAgo = new Date(now.setMonth(now.getMonth() - 11)); // Last 12 months
     
-    // Create array of last 12 months
     const months: MonthlyActivity[] = [];
     for (let i = 0; i < 12; i++) {
       const date = new Date(monthsAgo.setMonth(monthsAgo.getMonth() + 1));
@@ -179,7 +197,6 @@ const AdminDashboard = () => {
       });
     }
 
-    // Count papers per month
     papers.forEach(paper => {
       const paperDate = new Date(paper.created_at);
       const monthIndex = months.findIndex(m => 
@@ -212,7 +229,6 @@ const AdminDashboard = () => {
         throw papersError;
       }
 
-      // Verify each paper exists in storage
       const validPapersPromises = (papersData || []).map(async (paper) => {
         const exists = await verifyPaperExists(paper.file_url);
         return exists ? paper : null;
@@ -223,7 +239,6 @@ const AdminDashboard = () => {
         paper !== null && paper.created_at !== undefined
       );
 
-      // Group valid papers by exam type
       const groupedPapers = validPapers.reduce((acc, paper) => {
         const examType = paper.exam_types?.name || 'Unknown';
         if (!acc[examType]) {
@@ -235,8 +250,8 @@ const AdminDashboard = () => {
 
       console.log('Grouped papers:', groupedPapers);
       setPapers(groupedPapers);
+      setFilteredPapers(groupedPapers);
 
-      // Generate monthly activity data
       const monthlyActivity = generateMonthlyActivity(validPapers);
       
       setStats(prev => ({
@@ -257,15 +272,10 @@ const AdminDashboard = () => {
     }
   };
 
-  const sanitizeFileName = (fileName: string) => {
-    // Remove square brackets and other special characters
-    return fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
-  };
-
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.exam_type_id) {
+    if (!file || !uploadData.branch_id || !uploadData.semester_id) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -287,14 +297,13 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Sanitize the filename
       const sanitizedFileName = sanitizeFileName(file.name);
       console.log('Uploading file:', sanitizedFileName);
 
       const { data: uploadData_, error: uploadError } = await supabase.storage
         .from('question-papers')
         .upload(sanitizedFileName, file, {
-          upsert: true // This will overwrite if file exists
+          upsert: true
         });
 
       if (uploadError) {
@@ -313,9 +322,10 @@ const AdminDashboard = () => {
         .insert({
           branch_id: parseInt(uploadData.branch_id),
           semester_id: parseInt(uploadData.semester_id),
-          exam_type_id: parseInt(uploadData.exam_type_id),
+          exam_type_id: null, // No longer used
           year: uploadData.year,
-          file_url: publicUrl
+          file_url: publicUrl,
+          subject_name: uploadData.subject_name // Added subject name
         });
 
       if (dbError) {
@@ -334,7 +344,7 @@ const AdminDashboard = () => {
       setUploadData({
         branch_id: "",
         semester_id: "",
-        exam_type_id: "",
+        subject_name: "",
         year: new Date().getFullYear(),
       });
     } catch (error) {
@@ -359,7 +369,6 @@ const AdminDashboard = () => {
       let fileUrl = editData.file_url;
 
       if (file) {
-        // Upload new file if provided
         const fileName = sanitizeFileName(file.name);
         const { error: uploadError } = await supabase.storage
           .from('question-papers')
@@ -381,7 +390,8 @@ const AdminDashboard = () => {
           semester_id: editData.semester_id,
           exam_type_id: editData.exam_type_id,
           year: editData.year,
-          file_url: fileUrl
+          file_url: fileUrl,
+          subject_name: editData.subject_name // Update subject name
         })
         .eq('id', editData.id);
 
@@ -459,7 +469,6 @@ const AdminDashboard = () => {
         description: "Question paper deleted successfully",
       });
 
-      // Update the local state to remove the deleted paper
       const updatedPapers: PapersByExamType = {};
       Object.entries(papers).forEach(([examType, papersList]) => {
         const filteredPapers = papersList.filter(p => p.id !== paperId);
@@ -469,7 +478,6 @@ const AdminDashboard = () => {
       });
       setPapers(updatedPapers);
 
-      // Update the stats to decrease the total papers count
       setStats(prevStats => ({
         ...prevStats,
         totalPapers: prevStats.totalPapers - 1
@@ -485,6 +493,10 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const sanitizeFileName = (fileName: string) => {
+    return fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
   };
 
   if (isLoading) {
@@ -552,22 +564,13 @@ const AdminDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="examType">Exam Type</Label>
-                <Select
-                  value={uploadData.exam_type_id}
-                  onValueChange={(value) => setUploadData(prev => ({ ...prev, exam_type_id: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Exam Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {examTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id.toString()}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="subject">Subject Name</Label>
+                <Input
+                  id="subject"
+                  value={uploadData.subject_name}
+                  onChange={(e) => setUploadData(prev => ({ ...prev, subject_name: e.target.value }))}
+                  placeholder="Enter subject name"
+                />
               </div>
 
               <div className="space-y-2">
@@ -632,10 +635,21 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <Input
+            type="search"
+            placeholder="Search papers by branch, semester, or year..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+
         {/* Papers Table - Now Grouped by Exam Type */}
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-4">Question Papers</h3>
-          {Object.entries(papers).map(([examType, papersList]) => (
+          {Object.entries(filteredPapers).map(([examType, papersList]) => (
             <div key={examType} className="mb-8">
               <h4 className="text-md font-medium mb-4">{examType}</h4>
               <div className="overflow-x-auto">
