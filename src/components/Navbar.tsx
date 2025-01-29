@@ -15,6 +15,20 @@ export const Navbar = () => {
 
     if (query.trim()) {
       try {
+        // First, get matching branch IDs
+        const { data: branchData, error: branchError } = await supabase
+          .from('branches')
+          .select('id')
+          .ilike('name', `%${query}%`);
+
+        if (branchError) {
+          console.error('Branch search error:', branchError);
+          return;
+        }
+
+        const branchIds = branchData.map(branch => branch.id);
+
+        // Then search papers with subject name OR matching branch IDs
         const { data, error } = await supabase
           .from('papers')
           .select(`
@@ -22,7 +36,9 @@ export const Navbar = () => {
             branches:branch_id(name, code),
             semesters:semester_id(number)
           `)
-          .or(`subject_name.ilike.%${query}%,branch_id.in.(select id from branches where name ilike '%${query}%')`)
+          .or(
+            `subject_name.ilike.%${query}%${branchIds.length > 0 ? `,branch_id.in.(${branchIds.join(',')})` : ''}`
+          )
           .order('created_at', { ascending: false });
 
         if (error) {
