@@ -6,9 +6,11 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Worker, Viewer } from '@react-pdf-viewer/core';
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
@@ -19,6 +21,9 @@ const ExamPapers = () => {
   const [validPapers, setValidPapers] = useState<any[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Create new plugin instance
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   const semesterNumber = parseInt(semester || '0', 10);
   if (isNaN(semesterNumber)) {
@@ -404,9 +409,14 @@ const ExamPapers = () => {
           <DialogTitle className="sr-only">View PDF Document</DialogTitle>
           {selectedPaper && (
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <div style={{ height: '100%' }}>
-                <Viewer fileUrl={selectedPaper} />
-              </div>
+              <ScrollArea className="h-full">
+                <div style={{ height: '100%' }}>
+                  <Viewer
+                    fileUrl={selectedPaper}
+                    plugins={[defaultLayoutPluginInstance]}
+                  />
+                </div>
+              </ScrollArea>
             </Worker>
           )}
         </DialogContent>
