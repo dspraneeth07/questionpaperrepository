@@ -116,7 +116,31 @@ const ExamPapers = () => {
 
       console.log('Attempting to download file:', filename);
 
-      // Try to download the file
+      // Try to download using the public URL directly first
+      try {
+        const response = await fetch(fileUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+          toast({
+            title: "Success",
+            description: "File downloaded successfully",
+          });
+          return;
+        }
+      } catch (fetchError) {
+        console.error('Direct download failed, trying Supabase storage:', fetchError);
+      }
+
+      // If direct download fails, try Supabase storage
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -124,11 +148,10 @@ const ExamPapers = () => {
 
       if (error) {
         console.error('Storage error:', error);
-        // Show a more user-friendly error message
         toast({
           variant: "destructive",
           title: "Download failed",
-          description: "This file was uploaded in an old format and is no longer accessible. Please contact the administrator to re-upload the file.",
+          description: "Unable to download the file. Please try again later or contact support.",
         });
         return;
       }
@@ -137,7 +160,6 @@ const ExamPapers = () => {
         throw new Error('No file data received');
       }
 
-      // Create a URL for the blob and trigger download
       const url = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
@@ -155,7 +177,7 @@ const ExamPapers = () => {
       console.error('Download error:', error);
       toast({
         variant: "destructive",
-        title: "Download failed",
+        title: "Error",
         description: error instanceof Error ? error.message : "Failed to download file",
       });
     }
