@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Define interfaces for our data types
+// Updated Paper interface to match Supabase response
 interface Paper {
   id: number;
   branch_id: number;
@@ -47,10 +47,18 @@ interface Paper {
   exam_type_id: number;
   year: number;
   file_url: string;
-  created_at?: string;
-  branches?: { name: string };
-  semesters?: { number: number };
-  exam_types?: { name: string };
+  created_at: string;
+  branches: { 
+    name: string;
+    code: string;
+  };
+  semesters: { 
+    number: number;
+  };
+  exam_types: { 
+    name: string;
+    code: string;
+  };
 }
 
 interface PapersByExamType {
@@ -175,7 +183,7 @@ const AdminDashboard = () => {
 
       // Filter out null values and group by exam type
       const groupedPapers = validPapers
-        .filter((paper): paper is Paper => paper !== null)
+        .filter((paper): paper is Paper => paper !== null && paper.created_at !== undefined)
         .reduce((acc, paper) => {
           const examType = paper.exam_types?.name || 'Unknown';
           if (!acc[examType]) {
