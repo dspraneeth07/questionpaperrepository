@@ -52,11 +52,35 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           return;
         }
 
+        // Verify file existence for each paper
+        const validPapers = [];
+        for (const paper of data || []) {
+          try {
+            // Extract file path from URL
+            const fileUrl = new URL(paper.file_url);
+            const filePath = fileUrl.pathname.split('/object/public/')[1];
+            
+            // Check if file exists in storage
+            const { data: fileExists } = await supabase
+              .storage
+              .from('question-papers')
+              .list('', {
+                search: filePath.split('/').pop()
+              });
+
+            if (fileExists && fileExists.length > 0) {
+              validPapers.push(paper);
+            }
+          } catch (error) {
+            console.error('Error checking file existence:', error);
+          }
+        }
+
         if (onSearchResults) {
-          onSearchResults(data || []);
+          onSearchResults(validPapers);
         }
         
-        console.log('Search results:', data);
+        console.log('Search results:', validPapers);
       } catch (error) {
         console.error('Search error:', error);
         toast({
