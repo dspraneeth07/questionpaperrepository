@@ -347,7 +347,6 @@ const AdminDashboard = () => {
         throw fetchError;
       }
 
-      // Extract filename from the URL
       const fileUrl = new URL(paper.file_url);
       const filePath = decodeURIComponent(fileUrl.pathname.split('/question-papers/').pop() || '');
 
@@ -357,7 +356,6 @@ const AdminDashboard = () => {
 
       console.log('Attempting to delete file:', filePath);
 
-      // Delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('question-papers')
         .remove([filePath]);
@@ -371,7 +369,6 @@ const AdminDashboard = () => {
         });
       }
 
-      // Delete the paper record from the database
       const { error: deleteError } = await supabase
         .from('papers')
         .delete()
@@ -396,6 +393,12 @@ const AdminDashboard = () => {
         }
       });
       setPapers(updatedPapers);
+
+      // Update the stats to decrease the total papers count
+      setStats(prevStats => ({
+        ...prevStats,
+        totalPapers: prevStats.totalPapers - 1
+      }));
 
     } catch (error) {
       console.error('Error deleting paper:', error);
