@@ -12,6 +12,7 @@ const ExamPapers = () => {
   const { branchCode, year, semester, examType } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [validPapers, setValidPapers] = useState<any[]>([]);
 
   // Validate URL parameters
   const semesterNumber = parseInt(semester || '0', 10);
@@ -71,7 +72,7 @@ const ExamPapers = () => {
         throw error;
       }
     },
-    retry: 3, // Add retry attempts
+    retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
@@ -103,7 +104,6 @@ const ExamPapers = () => {
     queryKey: ['papers', branchCode, year, semesterNumber, examType],
     queryFn: async () => {
       try {
-        // Fetch references sequentially to handle errors better
         const branchResult = await supabase
           .from('branches')
           .select('id')
@@ -177,11 +177,43 @@ const ExamPapers = () => {
     },
   });
 
+  // Check which papers actually exist in storage
+  useEffect(() => {
+    const checkPapersExistence = async () => {
+      if (!papers) return;
+      
+      const validPapersArray = [];
+      
+      for (const paper of papers) {
+        const urlParts = paper.file_url.split('/');
+        const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
+        
+        try {
+          const { data: fileExists } = await supabase
+            .storage
+            .from('question-papers')
+            .list('', {
+              search: filename
+            });
+
+          if (fileExists && fileExists.length > 0) {
+            validPapersArray.push(paper);
+          }
+        } catch (error) {
+          console.error('Error checking file existence:', error);
+        }
+      }
+      
+      setValidPapers(validPapersArray);
+    };
+
+    checkPapersExistence();
+  }, [papers]);
+
   const handleDownload = async (fileUrl: string) => {
     try {
       console.log('Starting download process for:', fileUrl);
       
-      // Validate file URL
       if (!fileUrl) {
         toast({
           variant: "destructive",
@@ -191,7 +223,6 @@ const ExamPapers = () => {
         return;
       }
 
-      // Check if file exists in storage before attempting download
       const urlParts = fileUrl.split('/');
       const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
       
@@ -211,7 +242,6 @@ const ExamPapers = () => {
         return;
       }
 
-      // Try to download using Supabase storage
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -270,9 +300,9 @@ const ExamPapers = () => {
         
         <h2 className="text-2xl font-bold text-primary mb-6">Question Papers</h2>
         
-        {papers && papers.length > 0 ? (
+        {validPapers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {papers.map((paper) => (
+            {validPapers.map((paper) => (
               <Card key={paper.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
