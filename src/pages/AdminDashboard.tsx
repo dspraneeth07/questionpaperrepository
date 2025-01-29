@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -486,7 +486,16 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <Link 
+            to="/" 
+            className="flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <Pencil className="h-5 w-5 mr-2" />
+            Back to Home
+          </Link>
+        </div>
 
         {/* Upload Section */}
         <Card className="p-6 mb-8">
@@ -630,107 +639,111 @@ const AdminDashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {papersList.map((paper: any) => (
-                      <TableRow key={paper.id}>
-                        <TableCell>{paper.file_url.split('/').pop()}</TableCell>
-                        <TableCell>{paper.branches?.name}</TableCell>
-                        <TableCell>{paper.semesters?.number}</TableCell>
-                        <TableCell>{paper.year}</TableCell>
-                        <TableCell className="space-x-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setEditData(paper)}
-                                className="hover:bg-gray-100"
-                              >
-                                <Pencil className="h-4 w-4 text-gray-600" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Question Paper</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={handleEdit} className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-branch">Branch</Label>
-                                  <Select
-                                    value={editData?.branch_id.toString()}
-                                    onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: parseInt(value) }))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select Branch" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {branches.map((branch) => (
-                                        <SelectItem key={branch.id} value={branch.id.toString()}>
-                                          {branch.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-semester">Semester</Label>
-                                  <Select
-                                    value={editData?.semester_id.toString()}
-                                    onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: parseInt(value) }))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select Semester" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {semesters.map((semester) => (
-                                        <SelectItem key={semester.id} value={semester.id.toString()}>
-                                          {semester.number}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-year">Year</Label>
-                                  <Input
-                                    id="edit-year"
-                                    type="number"
-                                    value={editData?.year}
-                                    onChange={(e) => setEditData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                                    min={2000}
-                                    max={new Date().getFullYear()}
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
-                                  <Input
-                                    id="edit-file"
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                  />
-                                </div>
-
-                                <Button type="submit" disabled={isLoading}>
-                                  {isLoading ? "Updating..." : "Update Question Paper"}
+                    {papersList.map((paper: any) => {
+                      const fileName = paper.file_url.split('/').pop() || 'Unnamed Paper';
+                      const decodedFileName = decodeURIComponent(fileName);
+                      return (
+                        <TableRow key={paper.id}>
+                          <TableCell title={decodedFileName}>{decodedFileName}</TableCell>
+                          <TableCell>{paper.branches?.name}</TableCell>
+                          <TableCell>{paper.semesters?.number}</TableCell>
+                          <TableCell>{paper.year}</TableCell>
+                          <TableCell className="space-x-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => setEditData(paper)}
+                                  className="hover:bg-gray-100"
+                                >
+                                  <Pencil className="h-4 w-4 text-gray-600" />
                                 </Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Question Paper</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleEdit} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="edit-branch">Branch</Label>
+                                    <Select
+                                      value={editData?.branch_id.toString()}
+                                      onValueChange={(value) => setEditData(prev => ({ ...prev, branch_id: parseInt(value) }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select Branch" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {branches.map((branch) => (
+                                          <SelectItem key={branch.id} value={branch.id.toString()}>
+                                            {branch.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
 
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleDelete(paper.id)}
-                            className="hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                                  <div className="space-y-2">
+                                    <Label htmlFor="edit-semester">Semester</Label>
+                                    <Select
+                                      value={editData?.semester_id.toString()}
+                                      onValueChange={(value) => setEditData(prev => ({ ...prev, semester_id: parseInt(value) }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select Semester" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {semesters.map((semester) => (
+                                          <SelectItem key={semester.id} value={semester.id.toString()}>
+                                            {semester.number}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="edit-year">Year</Label>
+                                    <Input
+                                      id="edit-year"
+                                      type="number"
+                                      value={editData?.year}
+                                      onChange={(e) => setEditData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                                      min={2000}
+                                      max={new Date().getFullYear()}
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
+                                    <Input
+                                      id="edit-file"
+                                      type="file"
+                                      accept=".pdf"
+                                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    />
+                                  </div>
+
+                                  <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? "Updating..." : "Update Question Paper"}
+                                  </Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleDelete(paper.id)}
+                              className="hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

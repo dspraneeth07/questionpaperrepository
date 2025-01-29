@@ -353,37 +353,44 @@ const ExamPapers = () => {
         
         {validPapers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {validPapers.map((paper) => (
-              <Card key={paper.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                      <FileText className="h-6 w-6 text-primary" />
+            {validPapers.map((paper) => {
+              const fileName = paper.file_url.split('/').pop() || 'Unnamed Paper';
+              const decodedFileName = decodeURIComponent(fileName);
+              
+              return (
+                <Card key={paper.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                        <FileText className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900 truncate max-w-[200px]" title={decodedFileName}>
+                          {decodedFileName}
+                        </h3>
+                        <p className="text-sm text-gray-500">{paper.year}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">Paper {paper.id}</h3>
-                      <p className="text-sm text-gray-500">{paper.year}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleView(paper.file_url)}
+                        className="p-2 hover:bg-primary/10 rounded-full transition-colors"
+                        title="View PDF"
+                      >
+                        <Eye className="h-5 w-5 text-primary" />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(paper.file_url)}
+                        className="p-2 hover:bg-primary/10 rounded-full transition-colors"
+                        title="Download PDF"
+                      >
+                        <Download className="h-5 w-5 text-primary" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleView(paper.file_url)}
-                      className="p-2 hover:bg-primary/10 rounded-full transition-colors"
-                      title="View PDF"
-                    >
-                      <Eye className="h-5 w-5 text-primary" />
-                    </button>
-                    <button
-                      onClick={() => handleDownload(paper.file_url)}
-                      className="p-2 hover:bg-primary/10 rounded-full transition-colors"
-                      title="Download PDF"
-                    >
-                      <Download className="h-5 w-5 text-primary" />
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">

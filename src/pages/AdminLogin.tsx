@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft } from "lucide-react";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -17,7 +18,6 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // First attempt to sign in with Supabase auth
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -34,7 +34,6 @@ const AdminLogin = () => {
         throw new Error("No user data returned");
       }
 
-      // If sign in successful, verify admin status
       const { data: adminUser, error: adminError } = await supabase
         .from('admin_users')
         .select()
@@ -42,18 +41,15 @@ const AdminLogin = () => {
         .maybeSingle();
 
       if (adminError) {
-        // If there's an error checking admin status, sign out the user
         await supabase.auth.signOut();
         throw new Error('Error verifying admin status');
       }
 
       if (!adminUser) {
-        // If user is not an admin, sign them out
         await supabase.auth.signOut();
         throw new Error('Unauthorized access. This account does not have admin privileges.');
       }
 
-      // Set admin flag in localStorage
       localStorage.setItem('adminAuthenticated', 'true');
       
       toast({
@@ -76,8 +72,12 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link to="/" className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-gray-900">
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Home
+        </Link>
         <img src="/vce-logo.png" alt="VCE Logo" className="mx-auto h-20 w-auto" />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Admin Login
