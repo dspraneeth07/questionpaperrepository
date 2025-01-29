@@ -5,7 +5,7 @@ import { FileText, Download, Eye } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Worker, Viewer } from '@react-pdf-viewer/core';
@@ -401,8 +401,9 @@ const ExamPapers = () => {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogTitle className="sr-only">View PDF Document</DialogTitle>
           {selectedPaper && (
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
               <div style={{ height: '100%' }}>
                 <Viewer fileUrl={selectedPaper} />
               </div>
