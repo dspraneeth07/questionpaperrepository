@@ -344,16 +344,20 @@ const AdminDashboard = () => {
         .eq('id', paperId)
         .single();
 
-      if (fetchError) throw fetchError;
-
-      // Extract filename from the URL by getting everything after the last '/'
-      const filePathMatch = paper.file_url.match(/question-papers\/(.+)$/);
-      if (!filePathMatch) {
-        throw new Error('Invalid file path format');
+      if (fetchError) {
+        console.error('Error fetching paper:', fetchError);
+        throw fetchError;
       }
-      const filePath = filePathMatch[1];
 
-      console.log('Attempting to delete file:', filePath); // Debug log
+      // Extract filename from the URL
+      const fileUrl = new URL(paper.file_url);
+      const filePath = fileUrl.pathname.split('/question-papers/').pop();
+
+      if (!filePath) {
+        throw new Error('Could not extract filename from URL');
+      }
+
+      console.log('Attempting to delete file:', filePath);
 
       // Delete the file from storage
       const { error: storageError } = await supabase.storage
@@ -361,8 +365,9 @@ const AdminDashboard = () => {
         .remove([filePath]);
 
       if (storageError) {
-        console.error('Storage deletion error:', storageError); // Debug log
-        throw storageError;
+        console.error('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage deletion fails
+        // The file might not exist in storage but we still want to clean up the database
       }
 
       // Delete the paper record from the database
@@ -372,7 +377,7 @@ const AdminDashboard = () => {
         .eq('id', paperId);
 
       if (deleteError) {
-        console.error('Database deletion error:', deleteError); // Debug log
+        console.error('Database deletion error:', deleteError);
         throw deleteError;
       }
 
@@ -386,7 +391,7 @@ const AdminDashboard = () => {
       console.error('Error deleting paper:', error);
       toast({
         title: "Error",
-        description: "Failed to delete question paper",
+        description: "Failed to delete question paper. Please try again.",
         variant: "destructive",
       });
     } finally {
