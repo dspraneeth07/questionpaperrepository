@@ -72,6 +72,11 @@ interface Stats {
   monthlyActivity: any[];
 }
 
+interface MonthlyActivity {
+  month: string;
+  uploads: number;
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -154,6 +159,34 @@ const AdminDashboard = () => {
     }
   };
 
+  const generateMonthlyActivity = (papers: Paper[]): MonthlyActivity[] => {
+    const now = new Date();
+    const monthsAgo = new Date(now.setMonth(now.getMonth() - 11)); // Last 12 months
+    
+    // Create array of last 12 months
+    const months: MonthlyActivity[] = [];
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(monthsAgo.setMonth(monthsAgo.getMonth() + 1));
+      months.push({
+        month: date.toLocaleString('default', { month: 'short' }),
+        uploads: 0
+      });
+    }
+
+    // Count papers per month
+    papers.forEach(paper => {
+      const paperDate = new Date(paper.created_at);
+      const monthIndex = months.findIndex(m => 
+        m.month === paperDate.toLocaleString('default', { month: 'short' })
+      );
+      if (monthIndex !== -1) {
+        months[monthIndex].uploads++;
+      }
+    });
+
+    return months;
+  };
+
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
@@ -194,9 +227,14 @@ const AdminDashboard = () => {
         }, {} as PapersByExamType);
 
       setPapers(groupedPapers);
+
+      // Generate monthly activity data
+      const monthlyActivity = generateMonthlyActivity(validPapers.filter((p): p is Paper => p !== null));
+      
       setStats(prev => ({
         ...prev,
-        totalPapers: Object.values(groupedPapers).flat().length
+        totalPapers: Object.values(groupedPapers).flat().length,
+        monthlyActivity
       }));
 
     } catch (error) {
@@ -569,7 +607,6 @@ const AdminDashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="uploads" fill="#4f46e5" name="Uploads" />
-                <Bar dataKey="downloads" fill="#10b981" name="Downloads" />
               </BarChart>
             </ResponsiveContainer>
           </div>
