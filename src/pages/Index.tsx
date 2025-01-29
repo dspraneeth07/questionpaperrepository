@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight, Lock, BookOpen } from "lucide-react";
+import { Building2, ChevronRight, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,25 +32,6 @@ const Index = () => {
               <Lock className="h-4 w-4" />
               Admin Login
             </Button>
-          </Link>
-        </div>
-        
-        <div className="mb-8">
-          <Link to="/cse-papers">
-            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group bg-primary/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                    <BookOpen className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">Computer Science Papers</h3>
-                    <p className="text-sm text-gray-500">View all CSE papers</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
-              </div>
-            </Card>
           </Link>
         </div>
 

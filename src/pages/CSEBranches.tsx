@@ -13,7 +13,7 @@ const CSEBranches = () => {
       const { data, error } = await supabase
         .from('branches')
         .select('*')
-        .or('id.eq.1,id.eq.2') // Assuming 1 is CSE and 2 is CSE-AIML
+        .or('code.eq.CSE,code.eq.CSE-AIML') // Only fetch CSE and CSE-AIML
         .order('name');
       
       if (error) throw error;
