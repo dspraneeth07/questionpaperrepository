@@ -5,7 +5,11 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export const Navbar = () => {
+interface NavbarProps {
+  onSearchResults?: (results: any[]) => void;
+}
+
+export const Navbar = ({ onSearchResults }: NavbarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
@@ -48,6 +52,10 @@ export const Navbar = () => {
           return;
         }
 
+        if (onSearchResults) {
+          onSearchResults(data || []);
+        }
+        
         console.log('Search results:', data);
       } catch (error) {
         console.error('Search error:', error);
@@ -57,6 +65,8 @@ export const Navbar = () => {
           variant: "destructive",
         });
       }
+    } else if (onSearchResults) {
+      onSearchResults([]);
     }
   };
 
