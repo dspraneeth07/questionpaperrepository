@@ -22,7 +22,7 @@ export const Navbar = () => {
             branches:branch_id(name, code),
             semesters:semester_id(number)
           `)
-          .or(`subject_name.ilike.%${query}%,branches.name.ilike.%${query}%`)
+          .or(`subject_name.ilike.%${query}%,branches.name.ilike.%${query}%`.split(','))
           .order('created_at', { ascending: false });
 
         if (error) {
