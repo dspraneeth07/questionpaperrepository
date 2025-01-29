@@ -233,6 +233,12 @@ const AdminDashboard = () => {
         throw dbError;
       }
 
+      // Update stats after successful upload
+      setStats(prev => ({
+        ...prev,
+        totalPapers: prev.totalPapers + 1
+      }));
+
       toast({
         title: "Success",
         description: "Question paper uploaded successfully",
@@ -372,6 +378,12 @@ const AdminDashboard = () => {
       // Update local state to remove the deleted paper
       setPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
       setFilteredPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
+      
+      // Decrement total papers count
+      setStats(prev => ({
+        ...prev,
+        totalPapers: Math.max(0, prev.totalPapers - 1)
+      }));
 
       toast({
         title: "Success",
@@ -414,6 +426,7 @@ const AdminDashboard = () => {
 
       const monthlyActivity = generateMonthlyActivity(validPapers);
       
+      // Set the total papers count based on actual number of papers
       setStats(prev => ({
         ...prev,
         totalPapers: validPapers.length,
