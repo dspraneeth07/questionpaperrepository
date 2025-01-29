@@ -17,59 +17,75 @@ const ExamPapers = () => {
   const semesterNumber = parseInt(semester || '0', 10);
   if (isNaN(semesterNumber)) {
     console.error('Invalid semester number:', semester);
+    toast({
+      variant: "destructive",
+      title: "Invalid Semester",
+      description: "The semester number is invalid",
+    });
     navigate('/');
     return null;
   }
 
   if (!branchCode || !examType) {
     console.error('Missing required parameters:', { branchCode, examType });
+    toast({
+      variant: "destructive",
+      title: "Missing Parameters",
+      description: "Required parameters are missing",
+    });
     navigate('/');
     return null;
   }
 
-  const { data: branch } = useQuery({
+  const { data: branch, isError: isBranchError } = useQuery({
     queryKey: ['branch', branchCode],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('code', branchCode)
-        .maybeSingle();
-      
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from('branches')
+          .select('*')
+          .eq('code', branchCode)
+          .maybeSingle();
+        
+        if (error) throw error;
+        
+        if (!data) {
+          toast({
+            variant: "destructive",
+            title: "Branch not found",
+            description: "The requested branch does not exist",
+          });
+          navigate('/');
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Error fetching branch:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to fetch branch details",
+          description: "Failed to fetch branch details. Please try again later.",
         });
-        navigate('/');
         throw error;
       }
-
-      if (!data) {
-        toast({
-          variant: "destructive",
-          title: "Branch not found",
-          description: "The requested branch does not exist",
-        });
-        navigate('/');
-        return null;
-      }
-
-      return data;
     },
   });
 
   const { data: examTypeDetails } = useQuery({
     queryKey: ['examType', examType],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('exam_types')
-        .select('*')
-        .eq('code', examType)
-        .maybeSingle();
-      
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from('exam_types')
+          .select('*')
+          .eq('code', examType)
+          .maybeSingle();
+        
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('Error fetching exam type:', error);
         toast({
           variant: "destructive",
           title: "Error",
@@ -77,7 +93,6 @@ const ExamPapers = () => {
         });
         throw error;
       }
-      return data;
     },
   });
 
@@ -92,7 +107,14 @@ const ExamPapers = () => {
           .eq('code', branchCode)
           .single();
         
-        if (branchResult.error) throw new Error('Branch not found');
+        if (branchResult.error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Branch not found",
+          });
+          throw new Error('Branch not found');
+        }
 
         const examTypeResult = await supabase
           .from('exam_types')
@@ -100,7 +122,14 @@ const ExamPapers = () => {
           .eq('code', examType)
           .single();
         
-        if (examTypeResult.error) throw new Error('Exam type not found');
+        if (examTypeResult.error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Exam type not found",
+          });
+          throw new Error('Exam type not found');
+        }
 
         const semesterResult = await supabase
           .from('semesters')
@@ -108,7 +137,14 @@ const ExamPapers = () => {
           .eq('number', semesterNumber)
           .single();
         
-        if (semesterResult.error) throw new Error('Semester not found');
+        if (semesterResult.error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Semester not found",
+          });
+          throw new Error('Semester not found');
+        }
 
         const { data, error } = await supabase
           .from('papers')
@@ -142,34 +178,47 @@ const ExamPapers = () => {
     try {
       console.log('Starting download process for:', fileUrl);
       
+      // Validate file URL
+      if (!fileUrl) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid file URL",
+        });
+        return;
+      }
+
       const urlParts = fileUrl.split('/');
       const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
 
       console.log('Attempting to download file:', filename);
 
+      // First try direct download
       try {
         const response = await fetch(fileUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-          
-          toast({
-            title: "Success",
-            description: "File downloaded successfully",
-          });
-          return;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Success",
+          description: "File downloaded successfully",
+        });
+        return;
       } catch (fetchError) {
-        console.error('Direct download failed, trying Supabase storage:', fetchError);
+        console.error('Direct download failed:', fetchError);
       }
 
+      // Fallback to Supabase storage
       const { data, error } = await supabase
         .storage
         .from('question-papers')
@@ -180,7 +229,7 @@ const ExamPapers = () => {
         toast({
           variant: "destructive",
           title: "Download failed",
-          description: "Unable to download the file. Please try again later or contact support.",
+          description: "The requested file could not be found. It may have been deleted or moved.",
         });
         return;
       }
@@ -207,7 +256,7 @@ const ExamPapers = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to download file",
+        description: "Failed to download file. Please try again later.",
       });
     }
   };
