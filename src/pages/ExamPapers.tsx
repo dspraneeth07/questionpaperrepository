@@ -23,11 +23,12 @@ const ExamPapers = () => {
   
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
-  // Function to convert Google Drive sharing URL to direct download URL
+  // Function to convert Google Drive sharing URL to direct view URL
   const convertToDirectDownloadURL = (url: string) => {
     const fileId = url.match(/\/d\/(.+?)\/view/)?.[1];
     if (fileId) {
-      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+      // For viewing, use the export=view parameter
+      return `https://drive.google.com/file/d/${fileId}/preview`;
     }
     return url;
   };
@@ -127,8 +128,8 @@ const ExamPapers = () => {
   };
 
   const handleDownload = (fileUrl: string) => {
-    const directUrl = convertToDirectDownloadURL(fileUrl);
-    window.open(directUrl, '_blank');
+    // For download, use the original URL since it will trigger the browser's download dialog
+    window.open(fileUrl, '_blank');
   };
 
   return (
