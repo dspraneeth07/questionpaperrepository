@@ -13,16 +13,26 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Validate email format first
+      if (!validateEmail(email)) {
+        throw new Error("Please enter a valid email address");
+      }
+
       console.log("Attempting login with email:", email);
       
       // First attempt authentication
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -40,7 +50,7 @@ const AdminLogin = () => {
       const { data: adminUser, error: adminError } = await supabase
         .from('admin_users')
         .select()
-        .eq('email', email)
+        .eq('email', email.trim())
         .maybeSingle();
 
       if (adminError) {
