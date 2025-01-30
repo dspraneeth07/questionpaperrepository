@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight, Lock } from "lucide-react";
+import { Building2, ChevronRight, Lock, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,10 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Index = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: branches, isLoading } = useQuery({
     queryKey: ['branches'],
@@ -44,6 +48,28 @@ const Index = () => {
   const handleBackToHome = () => {
     setSearchResults([]);
     setIsSearching(false);
+  };
+
+  const convertToViewableURL = (url: string) => {
+    try {
+      const fileId = url.match(/\/d\/(.+?)\/view/)?.[1] || 
+                     url.match(/id=(.+?)(&|$)/)?.[1];
+      
+      if (fileId) {
+        return `https://drive.google.com/file/d/${fileId}/preview`;
+      }
+      return url;
+    } catch (error) {
+      console.error('Error converting URL:', error);
+      return url;
+    }
+  };
+
+  const handleView = (fileUrl: string) => {
+    const viewUrl = convertToViewableURL(fileUrl);
+    console.log('Opening document at URL:', viewUrl);
+    setSelectedPaper(viewUrl);
+    setIsDialogOpen(true);
   };
 
   // Filter out CSE branches for separate handling
@@ -82,7 +108,7 @@ const Index = () => {
                       <TableHead>Branch</TableHead>
                       <TableHead>Semester</TableHead>
                       <TableHead>Year</TableHead>
-                      <TableHead>Download</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -93,14 +119,23 @@ const Index = () => {
                         <TableCell>{paper.semesters?.number}</TableCell>
                         <TableCell>{paper.year}</TableCell>
                         <TableCell>
-                          <a 
-                            href={paper.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            Download
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleView(paper.file_url)}
+                              className="text-primary hover:text-primary/80 transition-colors"
+                              title="View Paper"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <a 
+                              href={paper.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              Download
+                            </a>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -195,6 +230,28 @@ const Index = () => {
           </>
         )}
       </main>
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          setSelectedPaper(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogTitle>View Paper</DialogTitle>
+          <ScrollArea className="h-full">
+            {selectedPaper && (
+              <div className="w-full h-[calc(80vh-100px)]">
+                <iframe
+                  src={selectedPaper}
+                  className="w-full h-full border-0"
+                  allow="autoplay"
+                />
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
