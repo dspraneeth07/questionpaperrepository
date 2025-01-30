@@ -20,24 +20,7 @@ const AdminLogin = () => {
     try {
       console.log("Attempting login with email:", email);
       
-      // First check if user exists in admin_users table
-      const { data: adminUser, error: adminCheckError } = await supabase
-        .from('admin_users')
-        .select()
-        .eq('email', email)
-        .maybeSingle();
-
-      if (adminCheckError) {
-        console.error("Error checking admin status:", adminCheckError);
-        throw new Error('Error verifying admin status');
-      }
-
-      if (!adminUser) {
-        console.error("No admin user found with email:", email);
-        throw new Error('This email is not registered as an admin');
-      }
-
-      // Attempt authentication
+      // First attempt authentication
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -45,15 +28,31 @@ const AdminLogin = () => {
 
       if (signInError) {
         console.error("Sign in error:", signInError);
-        if (signInError.message === "Invalid login credentials") {
-          throw new Error("Invalid email or password. Please try again.");
-        }
-        throw signInError;
+        throw new Error("Invalid email or password. Please try again.");
       }
 
       if (!data.user) {
         console.error("No user data returned after successful sign in");
         throw new Error("Authentication failed");
+      }
+
+      // After successful auth, check if user is an admin
+      const { data: adminUser, error: adminError } = await supabase
+        .from('admin_users')
+        .select()
+        .eq('email', email)
+        .maybeSingle();
+
+      if (adminError) {
+        console.error("Error checking admin status:", adminError);
+        await supabase.auth.signOut();
+        throw new Error('Error verifying admin status');
+      }
+
+      if (!adminUser) {
+        console.error("No admin user found with email:", email);
+        await supabase.auth.signOut();
+        throw new Error('This email is not registered as an admin');
       }
 
       console.log("Login successful for user:", data.user.email);
