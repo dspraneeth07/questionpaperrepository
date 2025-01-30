@@ -229,9 +229,16 @@ const ExamPapers = () => {
                   <Viewer
                     fileUrl={selectedPaper}
                     plugins={[defaultLayoutPluginInstance]}
-                    onError={(error) => {
+                    renderError={(error: Error) => {
                       console.error('PDF Viewer Error:', error);
                       setPdfError("Unable to load the PDF viewer");
+                      return (
+                        <Alert variant="destructive" className="mb-4">
+                          <AlertDescription>
+                            Failed to load PDF. Please try downloading the file instead.
+                          </AlertDescription>
+                        </Alert>
+                      );
                     }}
                   />
                 </div>
