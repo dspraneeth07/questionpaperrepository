@@ -23,6 +23,15 @@ const ExamPapers = () => {
   
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
+  // Function to convert Google Drive sharing URL to direct download URL
+  const convertToDirectDownloadURL = (url: string) => {
+    const fileId = url.match(/\/d\/(.+?)\/view/)?.[1];
+    if (fileId) {
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+    return url;
+  };
+
   const { data: branch } = useQuery({
     queryKey: ['branch', branchCode],
     queryFn: async () => {
@@ -79,11 +88,6 @@ const ExamPapers = () => {
           return [];
         }
 
-        console.log('Found branch and semester:', { 
-          branchId: branchData.id, 
-          semesterId: semesterData.id 
-        });
-
         const { data: papersData, error: papersError } = await supabase
           .from('papers')
           .select(`
@@ -117,12 +121,14 @@ const ExamPapers = () => {
   });
 
   const handleView = (fileUrl: string) => {
-    setSelectedPaper(fileUrl);
+    const directUrl = convertToDirectDownloadURL(fileUrl);
+    setSelectedPaper(directUrl);
     setIsDialogOpen(true);
   };
 
   const handleDownload = (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+    const directUrl = convertToDirectDownloadURL(fileUrl);
+    window.open(directUrl, '_blank');
   };
 
   return (
