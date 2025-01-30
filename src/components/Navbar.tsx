@@ -52,32 +52,21 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           return;
         }
 
-        // Verify file existence for each paper
-        const validPapers = [];
-        for (const paper of data || []) {
+        // For Google Drive URLs, we don't need to verify file existence
+        // Just check if the URL is valid
+        const validPapers = data?.filter(paper => {
           try {
-            // Extract file path from URL
-            const fileUrl = new URL(paper.file_url);
-            const filePath = fileUrl.pathname.split('/object/public/')[1];
-            
-            // Check if file exists in storage
-            const { data: fileExists } = await supabase
-              .storage
-              .from('question-papers')
-              .list('', {
-                search: filePath.split('/').pop()
-              });
-
-            if (fileExists && fileExists.length > 0) {
-              validPapers.push(paper);
-            }
+            const url = new URL(paper.file_url);
+            // Check if it's a Google Drive URL
+            return url.hostname.includes('drive.google.com') || url.hostname.includes('docs.google.com');
           } catch (error) {
-            console.error('Error checking file existence:', error);
+            console.error('Invalid URL:', error);
+            return false;
           }
-        }
+        });
 
         if (onSearchResults) {
-          onSearchResults(validPapers);
+          onSearchResults(validPapers || []);
         }
         
         console.log('Search results:', validPapers);
