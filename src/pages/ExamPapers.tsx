@@ -27,15 +27,36 @@ const ExamPapers = () => {
 
   // Function to convert Google Drive sharing URL to direct download URL
   const convertToDirectDownloadURL = (url: string) => {
-    // Check if it's a Google Drive URL
-    const fileId = url.match(/\/d\/(.+?)\/view/)?.[1] || 
-                   url.match(/id=(.+?)(&|$)/)?.[1];
-    
-    if (fileId) {
-      // Return the direct download URL
-      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    try {
+      const fileId = url.match(/\/d\/(.+?)\/view/)?.[1] || 
+                     url.match(/id=(.+?)(&|$)/)?.[1];
+      
+      if (fileId) {
+        // Use the export=view parameter instead of download for better compatibility
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      }
+      
+      // If it's already a direct URL or another format, return as is
+      return url;
+    } catch (error) {
+      console.error('Error converting URL:', error);
+      return url;
     }
-    return url;
+  };
+
+  const handleView = (fileUrl: string) => {
+    setPdfError(null);
+    const directUrl = convertToDirectDownloadURL(fileUrl);
+    console.log('Attempting to view PDF at URL:', directUrl);
+    setSelectedPaper(directUrl);
+    setIsDialogOpen(true);
+  };
+
+  const handleDownload = (fileUrl: string) => {
+    const directUrl = convertToDirectDownloadURL(fileUrl);
+    // For downloads, we use the export=download parameter
+    const downloadUrl = directUrl.replace('export=view', 'export=download');
+    window.open(downloadUrl, '_blank');
   };
 
   const { data: branch } = useQuery({
@@ -126,18 +147,6 @@ const ExamPapers = () => {
     },
   });
 
-  const handleView = (fileUrl: string) => {
-    setPdfError(null); // Reset any previous errors
-    const directUrl = convertToDirectDownloadURL(fileUrl);
-    setSelectedPaper(directUrl);
-    setIsDialogOpen(true);
-  };
-
-  const handleDownload = (fileUrl: string) => {
-    const directUrl = convertToDirectDownloadURL(fileUrl);
-    window.open(directUrl, '_blank');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -210,43 +219,58 @@ const ExamPapers = () => {
             No question papers found for this selection.
           </div>
         )}
-      </main>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <DialogTitle>View Paper</DialogTitle>
-          <ScrollArea className="h-full">
-            {pdfError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>
-                  {pdfError}. Please try downloading the file instead.
-                </AlertDescription>
-              </Alert>
-            )}
-            {selectedPaper && (
-              <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-                <div style={{ height: '100%' }}>
-                  <Viewer
-                    fileUrl={selectedPaper}
-                    plugins={[defaultLayoutPluginInstance]}
-                    renderError={(error: Error) => {
-                      console.error('PDF Viewer Error:', error);
-                      setPdfError("Unable to load the PDF viewer");
-                      return (
-                        <Alert variant="destructive" className="mb-4">
-                          <AlertDescription>
-                            Failed to load PDF. Please try downloading the file instead.
-                          </AlertDescription>
-                        </Alert>
-                      );
-                    }}
-                  />
-                </div>
-              </Worker>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setPdfError(null);
+            setSelectedPaper(null);
+          }
+        }}>
+          <DialogContent className="max-w-4xl h-[80vh]">
+            <DialogTitle>View Paper</DialogTitle>
+            <ScrollArea className="h-full">
+              {pdfError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    {pdfError}. Please try downloading the file instead.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {selectedPaper && (
+                <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+                  <div style={{ height: '100%' }}>
+                    <Viewer
+                      fileUrl={selectedPaper}
+                      plugins={[defaultLayoutPluginInstance]}
+                      renderError={(error: Error) => {
+                        console.error('PDF Viewer Error:', error);
+                        setPdfError("Unable to load the PDF viewer");
+                        return (
+                          <div className="flex flex-col items-center justify-center p-4">
+                            <Alert variant="destructive" className="mb-4 w-full">
+                              <AlertDescription>
+                                Failed to load PDF. Please try downloading the file instead.
+                              </AlertDescription>
+                            </Alert>
+                            <button
+                              onClick={() => handleDownload(selectedPaper)}
+                              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download PDF
+                            </button>
+                          </div>
+                        );
+                      }}
+                    />
+                  </div>
+                </Worker>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </main>
     </div>
   );
 };
