@@ -29,7 +29,7 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
 
         const branchIds = branchData.map(branch => branch.id);
 
-        // Then search papers with subject name OR matching branch IDs
+        // Then search papers with subject name OR matching branch IDs, excluding deleted papers
         const { data, error } = await supabase
           .from('papers')
           .select(`
@@ -40,6 +40,7 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           .or(
             `subject_name.ilike.%${query}%${branchIds.length > 0 ? `,branch_id.in.(${branchIds.join(',')})` : ''}`
           )
+          .is('deleted_at', null) // Add filter for non-deleted papers
           .order('created_at', { ascending: false });
 
         if (error) {
