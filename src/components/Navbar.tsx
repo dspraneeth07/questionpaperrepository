@@ -16,6 +16,8 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
   const handleSearch = async (query: string) => {
     if (query.trim()) {
       try {
+        console.log('Searching for:', query);
+        
         // First, get matching branch IDs
         const { data: branchData, error: branchError } = await supabase
           .from('branches')
@@ -27,9 +29,31 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           return;
         }
 
-        const branchIds = branchData.map(branch => branch.id);
+        const branchIds = branchData?.map(branch => branch.id) || [];
+        console.log('Matching branch IDs:', branchIds);
 
-        // Then search papers with subject name OR matching branch IDs, excluding deleted papers
+        // Build search conditions
+        const searchConditions = [];
+        
+        // Split query into words and create conditions for each word
+        const words = query.toLowerCase().split(' ');
+        words.forEach(word => {
+          if (word.trim()) {
+            searchConditions.push(`subject_name.ilike.%${word}%`);
+          }
+        });
+
+        // Add full query match condition
+        searchConditions.push(`subject_name.ilike.%${query}%`);
+        
+        // Add branch ID condition if any branches matched
+        if (branchIds.length > 0) {
+          searchConditions.push(`branch_id.in.(${branchIds.join(',')})`);
+        }
+
+        console.log('Search conditions:', searchConditions);
+
+        // Then search papers with constructed conditions
         const { data, error } = await supabase
           .from('papers')
           .select(`
@@ -37,7 +61,7 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
             branches:branch_id(name, code),
             semesters:semester_id(number)
           `)
-          .or(`subject_name.ilike.%${query}%,subject_name.ilike.%${query.split(' ').join('%')}%${branchIds.length > 0 ? `,branch_id.in.(${branchIds.join(',')})` : ''}`)
+          .or(searchConditions.join(','))
           .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
@@ -50,6 +74,8 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           });
           return;
         }
+
+        console.log('Search results before filtering:', data);
 
         // For Google Drive URLs, we don't need to verify file existence
         // Just check if the URL is valid
@@ -64,11 +90,11 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           }
         });
 
+        console.log('Final valid papers:', validPapers);
+
         if (onSearchResults) {
           onSearchResults(validPapers || []);
         }
-        
-        console.log('Search results:', validPapers);
       } catch (error) {
         console.error('Search error:', error);
         toast({
