@@ -294,7 +294,6 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Perform hard delete for now
       const { error: deleteError } = await supabase
         .from('papers')
         .delete()

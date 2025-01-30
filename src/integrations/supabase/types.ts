@@ -76,6 +76,7 @@ export type Database = {
         Row: {
           branch_id: number
           created_at: string
+          deleted_at: string | null
           exam_type_id: number
           file_url: string
           id: number
@@ -86,6 +87,7 @@ export type Database = {
         Insert: {
           branch_id: number
           created_at?: string
+          deleted_at?: string | null
           exam_type_id: number
           file_url: string
           id?: number
@@ -96,6 +98,7 @@ export type Database = {
         Update: {
           branch_id?: number
           created_at?: string
+          deleted_at?: string | null
           exam_type_id?: number
           file_url?: string
           id?: number
