@@ -294,9 +294,10 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
+      // Update the deleted_at timestamp instead of deleting the record
       const { error: deleteError } = await supabase
         .from('papers')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', paperId);
 
       if (deleteError) {
@@ -341,7 +342,7 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Removed deleted_at filter temporarily
+      // Add filter for non-deleted papers
       const { data: papersData, error: papersError } = await supabase
         .from('papers')
         .select(`
@@ -349,6 +350,7 @@ const AdminDashboard = () => {
           branches:branch_id(name, code),
           semesters:semester_id(number)
         `)
+        .is('deleted_at', null) // Only fetch non-deleted papers
         .order('created_at', { ascending: false });
 
       if (papersError) {
