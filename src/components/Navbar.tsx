@@ -107,26 +107,26 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
   };
 
   return (
-    <nav className="bg-primary w-full py-4 px-6 shadow-md">
-      <div className="container mx-auto flex flex-col items-center justify-between gap-6">
+    <nav className="bg-primary w-full py-3 px-6 shadow-md">
+      <div className="container mx-auto flex flex-col items-center justify-between gap-4">
         <Link to="/" className="flex flex-col items-center text-center">
           <img 
             src="https://www.facultyplus.com/wp-content/uploads/2021/09/Vasavi-College-logo.gif" 
             alt="VCE Logo" 
-            className="h-24 w-24 object-contain bg-white rounded-full p-1 mb-3"
+            className="h-16 w-16 object-contain bg-white rounded-full p-1 mb-2"
           />
-          <div className="text-white space-y-2">
-            <h1 className="text-3xl font-bold tracking-wide">
+          <div className="text-white space-y-1">
+            <h1 className="text-2xl font-bold tracking-wide">
               VASAVI COLLEGE OF ENGINEERING
-              <span className="text-lg font-normal block mt-1">(AUTONOMOUS)</span>
+              <span className="text-sm font-normal block">(AUTONOMOUS)</span>
             </h1>
-            <p className="text-sm font-light tracking-wide">
+            <p className="text-xs font-light">
               IBRAHIMBAGH, HYDERABAD, 500031
             </p>
-            <h2 className="text-2xl font-semibold mt-4">
+            <h2 className="text-lg font-semibold mt-2">
               Dr. Sarvepalli Radhakrishnan Learning Resources Centre
             </h2>
-            <p className="text-xl font-medium text-accent mt-2">
+            <p className="text-base font-medium text-accent">
               Question Paper Repository
             </p>
           </div>
