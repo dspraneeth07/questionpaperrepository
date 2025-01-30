@@ -78,7 +78,11 @@ const AdminLogin = () => {
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back to Home
         </Link>
-        <img src="/vce-logo.png" alt="VCE Logo" className="mx-auto h-20 w-auto" />
+        <img 
+          src="https://hellohyderabad.org/wp-content/uploads/2023/07/Vasavi-College-of-Engineering.jpg" 
+          alt="VCE Logo" 
+          className="mx-auto h-20 w-auto object-contain" 
+        />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Admin Login
         </h2>
