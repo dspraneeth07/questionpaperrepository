@@ -13,6 +13,7 @@ import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ExamPapers = () => {
   const { branchCode, year, semester } = useParams();
@@ -20,15 +21,19 @@ const ExamPapers = () => {
   const { toast } = useToast();
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
-  // Function to convert Google Drive sharing URL to direct view URL
+  // Function to convert Google Drive sharing URL to direct download URL
   const convertToDirectDownloadURL = (url: string) => {
-    const fileId = url.match(/\/d\/(.+?)\/view/)?.[1];
+    // Check if it's a Google Drive URL
+    const fileId = url.match(/\/d\/(.+?)\/view/)?.[1] || 
+                   url.match(/id=(.+?)(&|$)/)?.[1];
+    
     if (fileId) {
-      // For viewing, use the export=view parameter
-      return `https://drive.google.com/file/d/${fileId}/preview`;
+      // Return the direct download URL
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
     }
     return url;
   };
@@ -122,14 +127,15 @@ const ExamPapers = () => {
   });
 
   const handleView = (fileUrl: string) => {
+    setPdfError(null); // Reset any previous errors
     const directUrl = convertToDirectDownloadURL(fileUrl);
     setSelectedPaper(directUrl);
     setIsDialogOpen(true);
   };
 
   const handleDownload = (fileUrl: string) => {
-    // For download, use the original URL since it will trigger the browser's download dialog
-    window.open(fileUrl, '_blank');
+    const directUrl = convertToDirectDownloadURL(fileUrl);
+    window.open(directUrl, '_blank');
   };
 
   return (
@@ -210,12 +216,23 @@ const ExamPapers = () => {
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogTitle>View Paper</DialogTitle>
           <ScrollArea className="h-full">
+            {pdfError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  {pdfError}. Please try downloading the file instead.
+                </AlertDescription>
+              </Alert>
+            )}
             {selectedPaper && (
               <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
                 <div style={{ height: '100%' }}>
                   <Viewer
                     fileUrl={selectedPaper}
                     plugins={[defaultLayoutPluginInstance]}
+                    onError={(error) => {
+                      console.error('PDF Viewer Error:', error);
+                      setPdfError("Unable to load the PDF viewer");
+                    }}
                   />
                 </div>
               </Worker>
