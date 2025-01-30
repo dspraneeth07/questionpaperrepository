@@ -125,7 +125,8 @@ const ExamPapers = () => {
           `)
           .eq('branch_id', branchData.id)
           .eq('semester_id', semesterData.id)
-          .eq('year', parseInt(year || '0'));
+          .eq('year', parseInt(year || '0'))
+          .is('deleted_at', null); // Only fetch non-deleted papers
 
         if (papersError) {
           console.error('Error fetching papers:', papersError);

@@ -294,27 +294,15 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // First, get the paper details to get the file URL
-      const { data: paper, error: fetchError } = await supabase
+      // Instead of hard deleting, we'll do a soft delete by setting deleted_at
+      const { error: updateError } = await supabase
         .from('papers')
-        .select('file_url')
-        .eq('id', paperId)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching paper:', fetchError);
-        throw fetchError;
-      }
-
-      // Delete the database entry
-      const { error: deleteError } = await supabase
-        .from('papers')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', paperId);
 
-      if (deleteError) {
-        console.error('Database deletion error:', deleteError);
-        throw deleteError;
+      if (updateError) {
+        console.error('Error deleting paper:', updateError);
+        throw updateError;
       }
 
       // Update local state to remove the deleted paper
@@ -332,6 +320,8 @@ const AdminDashboard = () => {
         description: "Question paper deleted successfully",
       });
 
+      await fetchDashboardData(); // Refresh the data
+
     } catch (error) {
       console.error('Error deleting paper:', error);
       toast({
@@ -348,7 +338,7 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // First get all papers from the database
+      // Updated query to only fetch non-deleted papers
       const { data: papersData, error: papersError } = await supabase
         .from('papers')
         .select(`
@@ -356,6 +346,7 @@ const AdminDashboard = () => {
           branches:branch_id(name, code),
           semesters:semester_id(number)
         `)
+        .is('deleted_at', null)  // Only fetch papers that haven't been deleted
         .order('created_at', { ascending: false });
 
       if (papersError) {
@@ -368,7 +359,6 @@ const AdminDashboard = () => {
 
       const monthlyActivity = generateMonthlyActivity(papersData);
       
-      // Update stats with accurate paper count
       setStats({
         totalPapers: papersData.length,
         totalDownloads: 0, // Keep existing value
