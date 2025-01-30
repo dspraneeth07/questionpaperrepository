@@ -294,15 +294,15 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Instead of hard deleting, we'll do a soft delete by setting deleted_at
-      const { error: updateError } = await supabase
+      // Perform hard delete for now
+      const { error: deleteError } = await supabase
         .from('papers')
-        .update({ deleted_at: new Date().toISOString() })
+        .delete()
         .eq('id', paperId);
 
-      if (updateError) {
-        console.error('Error deleting paper:', updateError);
-        throw updateError;
+      if (deleteError) {
+        console.error('Error deleting paper:', deleteError);
+        throw deleteError;
       }
 
       // Update local state to remove the deleted paper
@@ -338,7 +338,7 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Updated query to only fetch non-deleted papers
+      // Removed deleted_at filter temporarily
       const { data: papersData, error: papersError } = await supabase
         .from('papers')
         .select(`
@@ -346,7 +346,6 @@ const AdminDashboard = () => {
           branches:branch_id(name, code),
           semesters:semester_id(number)
         `)
-        .is('deleted_at', null)  // Only fetch papers that haven't been deleted
         .order('created_at', { ascending: false });
 
       if (papersError) {
@@ -361,8 +360,8 @@ const AdminDashboard = () => {
       
       setStats({
         totalPapers: papersData.length,
-        totalDownloads: 0, // Keep existing value
-        branchWiseDownloads: [], // Keep existing value
+        totalDownloads: 0,
+        branchWiseDownloads: [],
         monthlyActivity
       });
 
