@@ -36,6 +36,16 @@ const Index = () => {
     },
   });
 
+  const handleSearchResults = (results: any[]) => {
+    setSearchResults(results);
+    setIsSearching(results.length > 0);
+  };
+
+  const handleBackToHome = () => {
+    setSearchResults([]);
+    setIsSearching(false);
+  };
+
   // Filter out CSE branches for separate handling
   const nonCSEBranches = branches?.filter(
     branch => !['CSE', 'CSE-AIML'].includes(branch.code)
@@ -45,11 +55,6 @@ const Index = () => {
   const hasCSEBranches = branches?.some(
     branch => ['CSE', 'CSE-AIML'].includes(branch.code)
   );
-
-  const handleSearchResults = (results: any[]) => {
-    setSearchResults(results);
-    setIsSearching(results.length > 0);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,10 +106,30 @@ const Index = () => {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={handleBackToHome}
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                    Back to Home
+                  </Button>
+                </div>
               </Card>
             ) : (
               <Card className="p-6">
-                <p className="text-center text-gray-500">No results found</p>
+                <p className="text-center text-gray-500 mb-4">No results found</p>
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={handleBackToHome}
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                    Back to Home
+                  </Button>
+                </div>
               </Card>
             )}
           </div>
