@@ -37,10 +37,8 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
             branches:branch_id(name, code),
             semesters:semester_id(number)
           `)
-          .or(
-            `subject_name.ilike.%${query}%${branchIds.length > 0 ? `,branch_id.in.(${branchIds.join(',')})` : ''}`
-          )
-          .is('deleted_at', null) // Add filter for non-deleted papers
+          .or(`subject_name.ilike.%${query}%,subject_name.ilike.%${query.split(' ').join('%')}%${branchIds.length > 0 ? `,branch_id.in.(${branchIds.join(',')})` : ''}`)
+          .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
         if (error) {
