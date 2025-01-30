@@ -88,7 +88,7 @@ const AdminDashboard = () => {
   const [editData, setEditData] = useState<Paper | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
-  const [file, setFile] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredPapers, setFilteredPapers] = useState<Paper[]>([]);
@@ -141,10 +141,15 @@ const AdminDashboard = () => {
     }
   };
 
+  const sanitizeFileName = (fileName: string) => {
+    const cleanName = fileName.replace(/[\[\]{}()*+?.,\\^$|#\s]/g, '_');
+    return cleanName.toLowerCase();
+  };
+
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name) {
+    if (!file || !uploadData.branch_id || !uploadData.semester_id || !uploadData.subject_name) {
       toast({
         title: "Error",
         description: "Please fill in all required fields including subject name",
@@ -188,13 +193,37 @@ const AdminDashboard = () => {
         return;
       }
 
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const subjectSlug = sanitizeFileName(uploadData.subject_name);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const finalFileName = `${subjectSlug}_${timestamp}.${fileExt}`;
+
+      console.log('Uploading file:', finalFileName);
+
+      const { data: uploadData_, error: uploadError } = await supabase.storage
+        .from('question-papers')
+        .upload(finalFileName, file, {
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('File upload error:', uploadError);
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('question-papers')
+        .getPublicUrl(finalFileName);
+
+      console.log('File uploaded successfully, public URL:', publicUrl);
+
       const { error: dbError } = await supabase
         .from('papers')
         .insert({
           branch_id: parseInt(uploadData.branch_id),
           semester_id: parseInt(uploadData.semester_id),
           year: uploadData.year,
-          file_url: file, // Now using the URL directly
+          file_url: publicUrl,
           subject_name: uploadData.subject_name,
           exam_type_id: examType.id
         });
@@ -204,6 +233,7 @@ const AdminDashboard = () => {
         throw dbError;
       }
 
+      // Update stats after successful upload
       setStats(prev => ({
         ...prev,
         totalPapers: prev.totalPapers + 1
@@ -211,7 +241,7 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: "Question paper URL added successfully",
+        description: "Question paper uploaded successfully",
       });
 
       await fetchDashboardData();
@@ -224,10 +254,10 @@ const AdminDashboard = () => {
         year: new Date().getFullYear(),
       });
     } catch (error) {
-      console.error('Error adding paper:', error);
+      console.error('Error uploading paper:', error);
       toast({
         title: "Error",
-        description: "Failed to add question paper URL",
+        description: "Failed to upload question paper",
         variant: "destructive",
       });
     } finally {
@@ -245,7 +275,18 @@ const AdminDashboard = () => {
       let fileUrl = editData.file_url;
 
       if (file) {
-        fileUrl = file; // Use the new URL directly
+        const fileName = sanitizeFileName(file.name);
+        const { error: uploadError } = await supabase.storage
+          .from('question-papers')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('question-papers')
+          .getPublicUrl(fileName);
+
+        fileUrl = publicUrl;
       }
 
       const { error: updateError } = await supabase
@@ -296,6 +337,31 @@ const AdminDashboard = () => {
       if (fetchError) {
         console.error('Error fetching paper:', fetchError);
         throw fetchError;
+      }
+
+      // Extract the filename from the URL
+      const fileUrl = new URL(paper.file_url);
+      const filePath = decodeURIComponent(fileUrl.pathname.split('/question-papers/').pop() || '');
+
+      if (!filePath) {
+        throw new Error('Could not extract filename from URL');
+      }
+
+      console.log('Attempting to delete file:', filePath);
+
+      // Delete the file from storage
+      const { error: storageError } = await supabase.storage
+        .from('question-papers')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage deletion fails
+        toast({
+          title: "Warning",
+          description: "Could not delete file from storage, but will remove database entry",
+          variant: "destructive",
+        });
       }
 
       // Delete the database entry
@@ -355,14 +421,45 @@ const AdminDashboard = () => {
         throw papersError;
       }
 
-      setPapers(papersData || []);
-      setFilteredPapers(papersData || []);
+      // Verify each paper exists in storage before adding it to the valid papers list
+      const validPapersArray = [];
+      
+      if (papersData) {
+        for (const paper of papersData) {
+          const urlParts = paper.file_url.split('/');
+          const filename = decodeURIComponent(urlParts[urlParts.length - 1]);
+          
+          try {
+            const { data: fileExists } = await supabase
+              .storage
+              .from('question-papers')
+              .list('', {
+                search: filename
+              });
 
-      const monthlyActivity = generateMonthlyActivity(papersData || []);
+            if (fileExists && fileExists.length > 0) {
+              validPapersArray.push(paper);
+            } else {
+              // If file doesn't exist in storage, remove it from the database
+              await supabase
+                .from('papers')
+                .delete()
+                .eq('id', paper.id);
+            }
+          } catch (error) {
+            console.error('Error checking file existence:', error);
+          }
+        }
+      }
+
+      setPapers(validPapersArray);
+      setFilteredPapers(validPapersArray);
+
+      const monthlyActivity = generateMonthlyActivity(validPapersArray);
       
       // Update stats with accurate paper count
       setStats({
-        totalPapers: papersData.length,
+        totalPapers: validPapersArray.length,
         totalDownloads: 0, // Keep existing value
         branchWiseDownloads: [], // Keep existing value
         monthlyActivity
@@ -494,18 +591,14 @@ const AdminDashboard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file">Question Paper URL (Google Drive)</Label>
+              <Label htmlFor="file">Question Paper (PDF)</Label>
               <Input
                 id="file"
-                type="url"
-                placeholder="Paste your Google Drive PDF URL here"
-                value={file || ''}
-                onChange={(e) => setFile(e.target.value)}
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
                 required
               />
-              <p className="text-sm text-gray-500">
-                Make sure the Google Drive link is publicly accessible
-              </p>
             </div>
 
             <Button type="submit" disabled={isLoading}>
@@ -659,13 +752,12 @@ const AdminDashboard = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="edit-file">New Question Paper URL (Optional)</Label>
+                              <Label htmlFor="edit-file">New Question Paper (Optional)</Label>
                               <Input
                                 id="edit-file"
-                                type="url"
-                                placeholder="Paste your Google Drive PDF URL here"
-                                value={file || ''}
-                                onChange={(e) => setFile(e.target.value)}
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => setFile(e.target.files?.[0] || null)}
                               />
                             </div>
 
