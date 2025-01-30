@@ -128,7 +128,7 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           <img 
             src="https://www.graduatesengine.com/assets/uploads/listingsThumbnail/ge/vasavi-college-of-engineering.gif" 
             alt="VCE Logo" 
-            className="h-16 w-16 object-contain bg-white rounded-full p-1"
+            className="h-24 w-24 object-contain bg-white rounded-full p-1"
           />
         </Link>
 
