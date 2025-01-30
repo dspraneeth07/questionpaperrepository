@@ -301,25 +301,29 @@ const AdminDashboard = () => {
 
       if (deleteError) {
         console.error('Error deleting paper:', deleteError);
-        throw deleteError;
+        toast({
+          title: "Error",
+          description: "Failed to delete question paper. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Update local state to remove the deleted paper
-      setPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
+      // Update local state immediately
+      const updatedPapers = papers.filter(paper => paper.id !== paperId);
+      setPapers(updatedPapers);
       setFilteredPapers(prevPapers => prevPapers.filter(paper => paper.id !== paperId));
       
-      // Decrement total papers count
+      // Update stats
       setStats(prev => ({
         ...prev,
-        totalPapers: Math.max(0, prev.totalPapers - 1)
+        totalPapers: prev.totalPapers - 1
       }));
 
       toast({
         title: "Success",
         description: "Question paper deleted successfully",
       });
-
-      await fetchDashboardData(); // Refresh the data
 
     } catch (error) {
       console.error('Error deleting paper:', error);
