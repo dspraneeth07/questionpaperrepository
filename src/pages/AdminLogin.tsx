@@ -96,9 +96,9 @@ const AdminLogin = () => {
           Back to Home
         </Link>
         <img 
-          src="https://hellohyderabad.org/wp-content/uploads/2023/07/Vasavi-College-of-Engineering.jpg" 
+          src="https://www.graduatesengine.com/assets/uploads/listingsThumbnail/ge/vasavi-college-of-engineering.gif" 
           alt="VCE Logo" 
-          className="mx-auto h-20 w-auto object-contain" 
+          className="mx-auto h-32 w-auto object-contain rounded-lg shadow-sm" 
         />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Admin Login
