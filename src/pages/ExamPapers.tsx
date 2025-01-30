@@ -22,21 +22,24 @@ const ExamPapers = () => {
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [useIframeViewer, setUseIframeViewer] = useState(false);
   
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
-  // Function to convert Google Drive sharing URL to direct download URL
-  const convertToDirectDownloadURL = (url: string) => {
+  // Function to convert Google Drive URL to appropriate format
+  const convertToViewableURL = (url: string) => {
     try {
       const fileId = url.match(/\/d\/(.+?)\/view/)?.[1] || 
                      url.match(/id=(.+?)(&|$)/)?.[1];
       
       if (fileId) {
-        // Use the export=view parameter instead of download for better compatibility
+        // For iframe viewing
+        if (useIframeViewer) {
+          return `https://drive.google.com/file/d/${fileId}/preview`;
+        }
+        // For PDF viewer attempt
         return `https://drive.google.com/uc?export=view&id=${fileId}`;
       }
-      
-      // If it's already a direct URL or another format, return as is
       return url;
     } catch (error) {
       console.error('Error converting URL:', error);
@@ -46,17 +49,22 @@ const ExamPapers = () => {
 
   const handleView = (fileUrl: string) => {
     setPdfError(null);
-    const directUrl = convertToDirectDownloadURL(fileUrl);
-    console.log('Attempting to view PDF at URL:', directUrl);
-    setSelectedPaper(directUrl);
+    setUseIframeViewer(false);
+    const viewUrl = convertToViewableURL(fileUrl);
+    console.log('Attempting to view document at URL:', viewUrl);
+    setSelectedPaper(viewUrl);
     setIsDialogOpen(true);
   };
 
   const handleDownload = (fileUrl: string) => {
-    const directUrl = convertToDirectDownloadURL(fileUrl);
-    // For downloads, we use the export=download parameter
-    const downloadUrl = directUrl.replace('export=view', 'export=download');
-    window.open(downloadUrl, '_blank');
+    const fileId = fileUrl.match(/\/d\/(.+?)\/view/)?.[1] || 
+                   fileUrl.match(/id=(.+?)(&|$)/)?.[1];
+    
+    if (fileId) {
+      window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, '_blank');
+    } else {
+      window.open(fileUrl, '_blank');
+    }
   };
 
   const { data: branch } = useQuery({
@@ -225,6 +233,7 @@ const ExamPapers = () => {
           if (!open) {
             setPdfError(null);
             setSelectedPaper(null);
+            setUseIframeViewer(false);
           }
         }}>
           <DialogContent className="max-w-4xl h-[80vh]">
@@ -233,11 +242,17 @@ const ExamPapers = () => {
               {pdfError && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    {pdfError}. Please try downloading the file instead.
+                    {pdfError}
+                    <button
+                      onClick={() => setUseIframeViewer(true)}
+                      className="ml-2 text-primary hover:underline"
+                    >
+                      Try alternate viewer
+                    </button>
                   </AlertDescription>
                 </Alert>
               )}
-              {selectedPaper && (
+              {selectedPaper && !useIframeViewer && (
                 <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
                   <div style={{ height: '100%' }}>
                     <Viewer
@@ -245,27 +260,44 @@ const ExamPapers = () => {
                       plugins={[defaultLayoutPluginInstance]}
                       renderError={(error: Error) => {
                         console.error('PDF Viewer Error:', error);
-                        setPdfError("Unable to load the PDF viewer");
+                        setPdfError("Unable to load PDF in the default viewer");
                         return (
                           <div className="flex flex-col items-center justify-center p-4">
                             <Alert variant="destructive" className="mb-4 w-full">
                               <AlertDescription>
-                                Failed to load PDF. Please try downloading the file instead.
+                                Failed to load PDF in the default viewer. Try using the alternate viewer or download the file.
                               </AlertDescription>
                             </Alert>
-                            <button
-                              onClick={() => handleDownload(selectedPaper)}
-                              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-                            >
-                              <Download className="h-4 w-4" />
-                              Download PDF
-                            </button>
+                            <div className="flex gap-4">
+                              <button
+                                onClick={() => setUseIframeViewer(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                              >
+                                Try alternate viewer
+                              </button>
+                              <button
+                                onClick={() => handleDownload(selectedPaper)}
+                                className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10 transition-colors"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download PDF
+                              </button>
+                            </div>
                           </div>
                         );
                       }}
                     />
                   </div>
                 </Worker>
+              )}
+              {selectedPaper && useIframeViewer && (
+                <div className="w-full h-[calc(80vh-100px)]">
+                  <iframe
+                    src={convertToViewableURL(selectedPaper)}
+                    className="w-full h-full border-0"
+                    allow="autoplay"
+                  />
+                </div>
               )}
             </ScrollArea>
           </DialogContent>
