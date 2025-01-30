@@ -15,25 +15,47 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { toast } = useToast();
 
-  const { data: branches, isLoading } = useQuery({
+  const { data: branches, isLoading, error } = useQuery({
     queryKey: ['branches'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('branches')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        console.error('Error fetching branches:', error);
-        throw error;
+      try {
+        console.log('Fetching branches...');
+        const { data, error } = await supabase
+          .from('branches')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description: "Unable to connect to the database. Please check your connection and try again.",
+          });
+          throw error;
+        }
+
+        console.log('Branches fetched successfully:', data);
+        return data;
+      } catch (err) {
+        console.error('Error fetching branches:', err);
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Unable to connect to the database. Please check your connection and try again.",
+        });
+        throw err;
       }
-      return data;
     },
+    retry: 1, // Only retry once
+    retryDelay: 1000, // Wait 1 second before retrying
   });
 
   const handleSearchResults = (results: any[]) => {
@@ -55,6 +77,29 @@ const Index = () => {
   const hasCSEBranches = branches?.some(
     branch => ['CSE', 'CSE-AIML'].includes(branch.code)
   );
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar onSearchResults={handleSearchResults} />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Connection Error</h2>
+            <p className="text-gray-600 mb-6">
+              Unable to connect to the database. Please check your connection and try again.
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="mx-auto"
+            >
+              Retry Connection
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
