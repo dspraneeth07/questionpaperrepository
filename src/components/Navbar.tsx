@@ -1,57 +1,60 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavbarProps {
   onSearchResults?: (results: any[]) => void;
 }
 
 export const Navbar = ({ onSearchResults }: NavbarProps) => {
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const handleSearch = async (query: string) => {
     if (query.trim()) {
-      setIsSearching(true);
       try {
-        console.log('Starting search with query:', query);
+        console.log('Searching for:', query);
         
         // First, get matching branch IDs
         const { data: branchData, error: branchError } = await supabase
           .from('branches')
           .select('id')
-          .or(`name.ilike.%${query}%,code.ilike.%${query}%`);
+          .ilike('name', `%${query}%`);
 
         if (branchError) {
           console.error('Branch search error:', branchError);
-          toast({
-            variant: "destructive",
-            title: "Search Error",
-            description: "Failed to search branches. Please try again.",
-          });
-          setIsSearching(false);
           return;
         }
 
         const branchIds = branchData?.map(branch => branch.id) || [];
-        console.log('Found matching branch IDs:', branchIds);
+        console.log('Matching branch IDs:', branchIds);
 
-        // Create search conditions for papers
-        const searchWords = query.toLowerCase().trim().split(/\s+/);
-        const searchConditions = searchWords.map(word => `subject_name.ilike.%${word}%`);
+        // Build search conditions
+        const searchConditions = [];
         
-        // Add branch condition if branches were found
+        // Split query into words and create conditions for each word
+        const words = query.toLowerCase().split(' ');
+        words.forEach(word => {
+          if (word.trim()) {
+            searchConditions.push(`subject_name.ilike.%${word}%`);
+          }
+        });
+
+        // Add full query match condition
+        searchConditions.push(`subject_name.ilike.%${query}%`);
+        
+        // Add branch ID condition if any branches matched
         if (branchIds.length > 0) {
           searchConditions.push(`branch_id.in.(${branchIds.join(',')})`);
         }
 
         console.log('Search conditions:', searchConditions);
 
-        // Search papers with all conditions
-        const { data: papers, error: papersError } = await supabase
+        // Then search papers with constructed conditions
+        const { data, error } = await supabase
           .from('papers')
           .select(`
             *,
@@ -62,76 +65,97 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
           .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
-        if (papersError) {
-          console.error('Papers search error:', papersError);
+        if (error) {
+          console.error('Search error:', error);
           toast({
+            title: "Error",
+            description: "Failed to search papers",
             variant: "destructive",
-            title: "Search Error",
-            description: "Failed to search papers. Please try again.",
           });
-          setIsSearching(false);
           return;
         }
 
-        console.log('Found papers:', papers);
+        console.log('Search results before filtering:', data);
 
-        // Filter out invalid papers and validate URLs
-        const validPapers = papers?.filter(paper => {
+        // For Google Drive URLs, we don't need to verify file existence
+        // Just check if the URL is valid
+        const validPapers = data?.filter(paper => {
           try {
-            new URL(paper.file_url);
-            return true;
-          } catch {
-            console.warn('Invalid paper URL:', paper.file_url);
+            const url = new URL(paper.file_url);
+            // Check if it's a Google Drive URL
+            return url.hostname.includes('drive.google.com') || url.hostname.includes('docs.google.com');
+          } catch (error) {
+            console.error('Invalid URL:', error);
             return false;
           }
         });
 
-        console.log('Valid papers after URL check:', validPapers);
-
-        if (validPapers && validPapers.length === 0) {
-          toast({
-            title: "No Results",
-            description: "No papers found matching your search.",
-          });
-        }
+        console.log('Final valid papers:', validPapers);
 
         if (onSearchResults) {
           onSearchResults(validPapers || []);
         }
-
       } catch (error) {
         console.error('Search error:', error);
         toast({
+          title: "Error",
+          description: "Failed to search papers",
           variant: "destructive",
-          title: "Search Error",
-          description: "An unexpected error occurred. Please try again.",
         });
-      } finally {
-        setIsSearching(false);
       }
     } else if (onSearchResults) {
       onSearchResults([]);
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    handleSearch(query);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch(searchQuery);
+    }
+  };
+
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold text-primary">
-            Question Bank
-          </Link>
-          
-          <div className="relative w-full max-w-sm mx-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              type="search"
-              placeholder="Search papers..."
-              className="pl-10 w-full"
-              onChange={(e) => handleSearch(e.target.value)}
-              disabled={isSearching}
-            />
+    <nav className="bg-primary w-full py-3 px-6 shadow-md">
+      <div className="container mx-auto flex flex-col items-center justify-between gap-4">
+        <Link to="/" className="flex flex-col items-center text-center">
+          <img 
+            src="https://www.facultyplus.com/wp-content/uploads/2021/09/Vasavi-College-logo.gif" 
+            alt="VCE Logo" 
+            className="h-16 w-16 object-contain bg-white rounded-full p-1 mb-2"
+          />
+          <div className="text-white space-y-1">
+            <h1 className="text-2xl font-bold tracking-wide">
+              VASAVI COLLEGE OF ENGINEERING
+              <span className="text-sm font-normal block">(AUTONOMOUS)</span>
+            </h1>
+            <p className="text-xs font-light">
+              IBRAHIMBAGH, HYDERABAD, 500031
+            </p>
+            <h2 className="text-lg font-semibold mt-2">
+              Dr. Sarvepalli Radhakrishnan Learning Resources Centre
+            </h2>
+            <p className="text-base font-medium text-accent">
+              Question Paper Repository
+            </p>
           </div>
+        </Link>
+        
+        <div className="relative w-full md:w-96">
+          <Input
+            type="search"
+            placeholder="Search papers..."
+            className="w-full pl-10 pr-4 py-2 rounded-lg"
+            value={searchQuery}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         </div>
       </div>
     </nav>
