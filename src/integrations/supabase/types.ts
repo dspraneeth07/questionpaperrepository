@@ -82,6 +82,7 @@ export type Database = {
           semester_id: number
           subject_name: string | null
           year: number
+          deleted_at: string | null
         }
         Insert: {
           branch_id: number
@@ -92,6 +93,7 @@ export type Database = {
           semester_id: number
           subject_name?: string | null
           year: number
+          deleted_at?: string | null
         }
         Update: {
           branch_id?: number
@@ -102,6 +104,7 @@ export type Database = {
           semester_id?: number
           subject_name?: string | null
           year?: number
+          deleted_at?: string | null
         }
         Relationships: [
           {
