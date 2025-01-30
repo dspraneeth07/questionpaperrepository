@@ -22,8 +22,6 @@ const ExamPapers = () => {
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [useIframeViewer, setUseIframeViewer] = useState(false);
-  
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   // Function to convert Google Drive URL to appropriate format
@@ -33,12 +31,7 @@ const ExamPapers = () => {
                      url.match(/id=(.+?)(&|$)/)?.[1];
       
       if (fileId) {
-        // For iframe viewing
-        if (useIframeViewer) {
-          return `https://drive.google.com/file/d/${fileId}/preview`;
-        }
-        // For PDF viewer attempt
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        return `https://drive.google.com/file/d/${fileId}/preview`;
       }
       return url;
     } catch (error) {
@@ -49,9 +42,8 @@ const ExamPapers = () => {
 
   const handleView = (fileUrl: string) => {
     setPdfError(null);
-    setUseIframeViewer(false);
     const viewUrl = convertToViewableURL(fileUrl);
-    console.log('Attempting to view document at URL:', viewUrl);
+    console.log('Opening document at URL:', viewUrl);
     setSelectedPaper(viewUrl);
     setIsDialogOpen(true);
   };
@@ -233,67 +225,15 @@ const ExamPapers = () => {
           if (!open) {
             setPdfError(null);
             setSelectedPaper(null);
-            setUseIframeViewer(false);
           }
         }}>
           <DialogContent className="max-w-4xl h-[80vh]">
             <DialogTitle>View Paper</DialogTitle>
             <ScrollArea className="h-full">
-              {pdfError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>
-                    {pdfError}
-                    <button
-                      onClick={() => setUseIframeViewer(true)}
-                      className="ml-2 text-primary hover:underline"
-                    >
-                      Try alternate viewer
-                    </button>
-                  </AlertDescription>
-                </Alert>
-              )}
-              {selectedPaper && !useIframeViewer && (
-                <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-                  <div style={{ height: '100%' }}>
-                    <Viewer
-                      fileUrl={selectedPaper}
-                      plugins={[defaultLayoutPluginInstance]}
-                      renderError={(error: Error) => {
-                        console.error('PDF Viewer Error:', error);
-                        setPdfError("Unable to load PDF in the default viewer");
-                        return (
-                          <div className="flex flex-col items-center justify-center p-4">
-                            <Alert variant="destructive" className="mb-4 w-full">
-                              <AlertDescription>
-                                Failed to load PDF in the default viewer. Try using the alternate viewer or download the file.
-                              </AlertDescription>
-                            </Alert>
-                            <div className="flex gap-4">
-                              <button
-                                onClick={() => setUseIframeViewer(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-                              >
-                                Try alternate viewer
-                              </button>
-                              <button
-                                onClick={() => handleDownload(selectedPaper)}
-                                className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10 transition-colors"
-                              >
-                                <Download className="h-4 w-4" />
-                                Download PDF
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
-                  </div>
-                </Worker>
-              )}
-              {selectedPaper && useIframeViewer && (
+              {selectedPaper && (
                 <div className="w-full h-[calc(80vh-100px)]">
                   <iframe
-                    src={convertToViewableURL(selectedPaper)}
+                    src={selectedPaper}
                     className="w-full h-full border-0"
                     allow="autoplay"
                   />
