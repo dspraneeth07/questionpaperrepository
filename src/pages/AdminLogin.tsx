@@ -18,12 +18,33 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
+      console.log("Attempting login with email:", email);
+      
+      // First check if user exists in admin_users table
+      const { data: adminUser, error: adminCheckError } = await supabase
+        .from('admin_users')
+        .select()
+        .eq('email', email)
+        .maybeSingle();
+
+      if (adminCheckError) {
+        console.error("Error checking admin status:", adminCheckError);
+        throw new Error('Error verifying admin status');
+      }
+
+      if (!adminUser) {
+        console.error("No admin user found with email:", email);
+        throw new Error('This email is not registered as an admin');
+      }
+
+      // Attempt authentication
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
+        console.error("Sign in error:", signInError);
         if (signInError.message === "Invalid login credentials") {
           throw new Error("Invalid email or password. Please try again.");
         }
@@ -31,25 +52,12 @@ const AdminLogin = () => {
       }
 
       if (!data.user) {
-        throw new Error("No user data returned");
+        console.error("No user data returned after successful sign in");
+        throw new Error("Authentication failed");
       }
 
-      const { data: adminUser, error: adminError } = await supabase
-        .from('admin_users')
-        .select()
-        .eq('email', email)
-        .maybeSingle();
-
-      if (adminError) {
-        await supabase.auth.signOut();
-        throw new Error('Error verifying admin status');
-      }
-
-      if (!adminUser) {
-        await supabase.auth.signOut();
-        throw new Error('Unauthorized access. This account does not have admin privileges.');
-      }
-
+      console.log("Login successful for user:", data.user.email);
+      
       localStorage.setItem('adminAuthenticated', 'true');
       
       toast({
