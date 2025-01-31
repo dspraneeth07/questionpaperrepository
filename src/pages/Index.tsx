@@ -86,11 +86,13 @@ const Index = () => {
 
   const handleDownload = async (paperId: number, fileUrl: string) => {
     try {
-      // Update download count
+      // Update download count using increment()
       const { error } = await supabase
         .from('papers')
-        .update({ downloads: () => supabase.sql`downloads + 1` })
-        .eq('id', paperId);
+        .update({ downloads: 1 })
+        .eq('id', paperId)
+        .select()
+        .single();
 
       if (error) {
         console.error('Error updating download count:', error);
