@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Download, Eye } from "lucide-react";
+import { FileText, Download, Eye, ArrowLeft } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
 
 const ExamPapers = () => {
   const { branchCode, year, semester } = useParams();
@@ -153,14 +154,24 @@ const ExamPapers = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="container mx-auto px-4 py-8 flex-grow">
-        <Breadcrumb
-          items={[
-            { label: "Home", path: "/" },
-            { label: branch?.name || branchCode || "", path: `/branch/${branchCode}` },
-            { label: year || "", path: `/branch/${branchCode}/year/${year}` },
-            { label: `Semester ${semester}`, path: `/branch/${branchCode}/year/${year}/semester/${semester}/papers` },
-          ]}
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Breadcrumb
+            items={[
+              { label: "Home", path: "/" },
+              { label: branch?.name || branchCode || "", path: `/branch/${branchCode}` },
+              { label: year || "", path: `/branch/${branchCode}/year/${year}` },
+              { label: `Semester ${semester}`, path: `/branch/${branchCode}/year/${year}/semester/${semester}/papers` },
+            ]}
+          />
+        </div>
         
         <h2 className="text-2xl font-bold text-primary mb-6">Question Papers</h2>
         

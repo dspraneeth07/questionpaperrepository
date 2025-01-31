@@ -2,11 +2,12 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Calendar, ChevronRight } from "lucide-react";
+import { Calendar, ChevronRight, ArrowLeft } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 const BranchYears = () => {
   const { branchCode } = useParams();
@@ -54,12 +55,22 @@ const BranchYears = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="container mx-auto px-4 py-8 flex-grow">
-        <Breadcrumb
-          items={[
-            { label: "Home", path: "/" },
-            { label: branch?.name || branchCode || "", path: `/branch/${branchCode}` },
-          ]}
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Breadcrumb
+            items={[
+              { label: "Home", path: "/" },
+              { label: branch?.name || branchCode || "", path: `/branch/${branchCode}` },
+            ]}
+          />
+        </div>
         
         <h2 className="text-2xl font-bold text-primary mb-6">Select Year</h2>
         
