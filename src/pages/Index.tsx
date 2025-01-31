@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
 import { Building2, ChevronRight, Lock, Eye, Download } from "lucide-react";
@@ -88,7 +89,7 @@ const Index = () => {
       // Update download count
       const { error } = await supabase
         .from('papers')
-        .update({ downloads: downloads => downloads + 1 })
+        .update({ downloads: () => supabase.sql`downloads + 1` })
         .eq('id', paperId);
 
       if (error) {
@@ -111,9 +112,9 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar onSearchResults={handleSearchResults} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-grow">
         <div className="flex justify-between items-center mb-6">
           <Breadcrumb items={[{ label: "Home", path: "/" }]} />
           <Link to="/admin/login">
@@ -261,6 +262,7 @@ const Index = () => {
           </>
         )}
       </main>
+      <Footer />
 
       {!isMobile && (
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
