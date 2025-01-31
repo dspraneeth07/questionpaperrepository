@@ -6,6 +6,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Footer } from "@/components/Footer";
 
 const BranchSemesters = () => {
   const { branchCode, year } = useParams();
@@ -66,9 +67,9 @@ const BranchSemesters = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-grow">
         <Breadcrumb
           items={[
             { label: "Home", path: "/" },
@@ -103,6 +104,7 @@ const BranchSemesters = () => {
           ))}
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

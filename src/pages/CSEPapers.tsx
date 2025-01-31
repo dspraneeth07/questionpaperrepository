@@ -10,11 +10,8 @@ import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Footer } from "@/components/Footer";
 
 const CSEPapers = () => {
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
@@ -41,9 +38,9 @@ const CSEPapers = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-grow">
         <Breadcrumb
           items={[
             { label: "Home", path: "/" },
@@ -92,23 +89,24 @@ const CSEPapers = () => {
             ))}
           </div>
         )}
-
-        <Dialog open={!!selectedPaper} onOpenChange={() => setSelectedPaper(null)}>
-          <DialogContent className="max-w-4xl h-[80vh]">
-            <DialogTitle>View Paper</DialogTitle>
-            <ScrollArea className="h-full w-full rounded-md">
-              {selectedPaper && (
-                <div style={{ height: '100%' }}>
-                  <Viewer
-                    fileUrl={selectedPaper}
-                    plugins={[defaultLayoutPluginInstance]}
-                  />
-                </div>
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
       </main>
+      <Footer />
+
+      <Dialog open={!!selectedPaper} onOpenChange={() => setSelectedPaper(null)}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogTitle>View Paper</DialogTitle>
+          <ScrollArea className="h-full w-full rounded-md">
+            {selectedPaper && (
+              <div style={{ height: '100%' }}>
+                <Viewer
+                  fileUrl={selectedPaper}
+                  plugins={[defaultLayoutPluginInstance]}
+                />
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

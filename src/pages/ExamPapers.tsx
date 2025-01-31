@@ -14,6 +14,7 @@ import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Footer } from "@/components/Footer";
 
 const ExamPapers = () => {
   const { branchCode, year, semester } = useParams();
@@ -149,9 +150,9 @@ const ExamPapers = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-grow">
         <Breadcrumb
           items={[
             { label: "Home", path: "/" },
@@ -220,30 +221,31 @@ const ExamPapers = () => {
             No question papers found for this selection.
           </div>
         )}
-
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) {
-            setPdfError(null);
-            setSelectedPaper(null);
-          }
-        }}>
-          <DialogContent className="max-w-4xl h-[80vh]">
-            <DialogTitle>View Paper</DialogTitle>
-            <ScrollArea className="h-full">
-              {selectedPaper && (
-                <div className="w-full h-[calc(80vh-100px)]">
-                  <iframe
-                    src={selectedPaper}
-                    className="w-full h-full border-0"
-                    allow="autoplay"
-                  />
-                </div>
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
       </main>
+      <Footer />
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          setPdfError(null);
+          setSelectedPaper(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogTitle>View Paper</DialogTitle>
+          <ScrollArea className="h-full">
+            {selectedPaper && (
+              <div className="w-full h-[calc(80vh-100px)]">
+                <iframe
+                  src={selectedPaper}
+                  className="w-full h-full border-0"
+                  allow="autoplay"
+                />
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

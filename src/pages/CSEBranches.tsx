@@ -5,6 +5,7 @@ import { Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Footer } from "@/components/Footer";
 
 const CSEBranches = () => {
   const { data: branches, isLoading } = useQuery({
@@ -25,9 +26,9 @@ const CSEBranches = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-grow">
         <Breadcrumb
           items={[
             { label: "Home", path: "/" },
@@ -77,6 +78,7 @@ const CSEBranches = () => {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 };

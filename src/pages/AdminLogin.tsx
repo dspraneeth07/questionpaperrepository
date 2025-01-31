@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft } from "lucide-react";
+import { Footer } from "@/components/Footer";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -89,63 +90,66 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Home
-        </Link>
-        <img 
-          src="https://www.graduatesengine.com/assets/uploads/listingsThumbnail/ge/vasavi-college-of-engineering.gif" 
-          alt="VCE Logo" 
-          className="mx-auto h-32 w-auto object-contain rounded-lg shadow-sm" 
-        />
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Admin Login
-        </h2>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="flex-grow py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <Link to="/" className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Home
+          </Link>
+          <img 
+            src="https://www.graduatesengine.com/assets/uploads/listingsThumbnail/ge/vasavi-college-of-engineering.gif" 
+            alt="VCE Logo" 
+            className="mx-auto h-32 w-auto object-contain rounded-lg shadow-sm" 
+          />
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Admin Login
+          </h2>
+        </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1"
-              />
-            </div>
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <form className="space-y-6" onSubmit={handleLogin}>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1"
-              />
-            </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
