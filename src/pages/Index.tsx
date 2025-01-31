@@ -163,10 +163,10 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar onSearchResults={handleSearchResults} />
-      <main className="container mx-auto px-4 py-8 flex-grow">
-        <div className="flex justify-between items-center mb-6">
+      <main className="flex-1 container mx-auto px-4 py-4">
+        <div className="flex justify-between items-center mb-4">
           <Breadcrumb items={[{ label: "Home", path: "/" }]} />
           <Link to="/admin/login">
             <Button variant="outline" className="flex items-center gap-2">
@@ -177,7 +177,7 @@ const Index = () => {
         </div>
 
         {isSearching ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-primary">Search Results</h2>
               <Button
@@ -190,7 +190,7 @@ const Index = () => {
               </Button>
             </div>
             {searchResults.length > 0 ? (
-              <Card className="p-6">
+              <Card className="p-4">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -236,7 +236,7 @@ const Index = () => {
                 </Table>
               </Card>
             ) : (
-              <Card className="p-6">
+              <Card className="p-4">
                 <p className="text-center text-gray-500 mb-4">No results found</p>
                 <div className="flex justify-center">
                   <Button
@@ -253,11 +253,11 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-bold text-primary mb-6">Select Branch</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h2 className="text-2xl font-bold text-primary mb-4">Select Branch</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {hasCSEBranches && (
                 <Link to="/cse-branches">
-                  <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+                  <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
@@ -276,7 +276,7 @@ const Index = () => {
               
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
-                  <Card key={i} className="p-6 animate-pulse">
+                  <Card key={i} className="p-4 animate-pulse">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-gray-200 rounded-lg" />
@@ -292,7 +292,7 @@ const Index = () => {
               ) : (
                 nonCSEBranches?.map((branch) => (
                   <Link to={`/branch/${branch.code}`} key={branch.id}>
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+                    <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
