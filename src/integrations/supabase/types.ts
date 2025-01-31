@@ -83,7 +83,6 @@ export type Database = {
           semester_id: number
           subject_name: string | null
           year: number
-          downloads: number
         }
         Insert: {
           branch_id: number
@@ -95,7 +94,6 @@ export type Database = {
           semester_id: number
           subject_name?: string | null
           year: number
-          downloads?: number
         }
         Update: {
           branch_id?: number
@@ -107,7 +105,6 @@ export type Database = {
           semester_id?: number
           subject_name?: string | null
           year?: number
-          downloads?: number
         }
         Relationships: [
           {
@@ -130,7 +127,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "semesters"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       semesters: {
