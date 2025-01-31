@@ -47,6 +47,7 @@ interface Paper {
   file_url: string;
   created_at: string;
   subject_name: string | null;
+  downloads: number;
   branches: { 
     name: string;
     code: string;
@@ -208,7 +209,8 @@ const AdminDashboard = () => {
           year: uploadData.year,
           file_url: uploadData.file_url,
           subject_name: uploadData.subject_name,
-          exam_type_id: examType.id
+          exam_type_id: examType.id,
+          downloads: 0 // Initialize downloads to 0
         });
 
       if (dbError) {
@@ -363,9 +365,12 @@ const AdminDashboard = () => {
 
       const monthlyActivity = generateMonthlyActivity(papersData);
       
+      // Calculate total downloads
+      const totalDownloads = papersData.reduce((sum, paper) => sum + (paper.downloads || 0), 0);
+      
       setStats({
         totalPapers: papersData.length,
-        totalDownloads: 0,
+        totalDownloads: totalDownloads,
         branchWiseDownloads: [],
         monthlyActivity
       });
@@ -570,6 +575,7 @@ const AdminDashboard = () => {
                   <TableHead>Branch</TableHead>
                   <TableHead>Semester</TableHead>
                   <TableHead>Year</TableHead>
+                  <TableHead>Downloads</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -580,6 +586,7 @@ const AdminDashboard = () => {
                     <TableCell>{paper.branches?.name}</TableCell>
                     <TableCell>{paper.semesters?.number}</TableCell>
                     <TableCell>{paper.year}</TableCell>
+                    <TableCell>{paper.downloads || 0}</TableCell>
                     <TableCell className="space-x-2">
                       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                         <DialogTrigger asChild>
