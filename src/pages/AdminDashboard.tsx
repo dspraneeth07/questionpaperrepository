@@ -47,7 +47,8 @@ interface Paper {
   file_url: string;
   created_at: string;
   subject_name: string | null;
-  downloads: number;
+  downloads: number | null;
+  views: number | null;  // Added views property
   branches: { 
     name: string;
     code: string;
