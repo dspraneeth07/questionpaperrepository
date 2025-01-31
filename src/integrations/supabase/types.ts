@@ -77,6 +77,7 @@ export type Database = {
           branch_id: number
           created_at: string
           deleted_at: string | null
+          downloads: number | null
           exam_type_id: number
           file_url: string
           id: number
@@ -88,6 +89,7 @@ export type Database = {
           branch_id: number
           created_at?: string
           deleted_at?: string | null
+          downloads?: number | null
           exam_type_id: number
           file_url: string
           id?: number
@@ -99,6 +101,7 @@ export type Database = {
           branch_id?: number
           created_at?: string
           deleted_at?: string | null
+          downloads?: number | null
           exam_type_id?: number
           file_url?: string
           id?: number
