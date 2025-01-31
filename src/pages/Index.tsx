@@ -88,9 +88,7 @@ const Index = () => {
       // Update download count
       const { error } = await supabase
         .from('papers')
-        .update({ 
-          downloads: supabase.sql`downloads + 1` 
-        })
+        .update({ downloads: downloads => downloads + 1 })
         .eq('id', paperId);
 
       if (error) {
@@ -128,7 +126,17 @@ const Index = () => {
 
         {isSearching ? (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-primary">Search Results</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-primary">Search Results</h2>
+              <Button
+                variant="outline"
+                onClick={handleBackToHome}
+                className="flex items-center gap-2"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                Back to Home
+              </Button>
+            </div>
             {searchResults.length > 0 ? (
               <Card className="p-6">
                 <Table>
@@ -174,16 +182,6 @@ const Index = () => {
                     ))}
                   </TableBody>
                 </Table>
-                <div className="mt-6 flex justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={handleBackToHome}
-                    className="flex items-center gap-2"
-                  >
-                    <ChevronRight className="h-4 w-4 rotate-180" />
-                    Back to Home
-                  </Button>
-                </div>
               </Card>
             ) : (
               <Card className="p-6">
