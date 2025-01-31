@@ -86,22 +86,27 @@ const Index = () => {
 
   const handleDownload = async (paperId: number, fileUrl: string) => {
     try {
-      // Update download count using increment()
-      const { error } = await supabase
-        .from('papers')
-        .update({ downloads: 1 })
-        .eq('id', paperId)
-        .select()
-        .single();
+      // Update download count using increment
+      const { error } = await supabase.rpc('increment_downloads', { paper_id: paperId });
 
       if (error) {
         console.error('Error updating download count:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update download count",
+          variant: "destructive",
+        });
       }
 
       // Open download link
       window.open(fileUrl, '_blank');
     } catch (error) {
       console.error('Error handling download:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process download",
+        variant: "destructive",
+      });
     }
   };
 
