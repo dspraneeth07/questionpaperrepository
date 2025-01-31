@@ -430,7 +430,7 @@ const AdminDashboard = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Question Papers Repository</h1>
           </div>
         </div>
 
@@ -529,8 +529,10 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold mt-2">{stats.totalDownloads}</p>
           </Card>
           <Card className="p-6">
-            <h3 className="text-lg font-medium">Most Downloaded</h3>
-            <p className="text-sm mt-2">Coming soon</p>
+            <h3 className="text-lg font-medium">Total Views</h3>
+            <p className="text-3xl font-bold mt-2">
+              {papers.reduce((sum, paper) => sum + (paper.views || 0), 0)}
+            </p>
           </Card>
         </div>
 

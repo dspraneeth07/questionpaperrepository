@@ -83,6 +83,7 @@ export type Database = {
           id: number
           semester_id: number
           subject_name: string | null
+          views: number | null
           year: number
         }
         Insert: {
@@ -95,6 +96,7 @@ export type Database = {
           id?: number
           semester_id: number
           subject_name?: string | null
+          views?: number | null
           year: number
         }
         Update: {
@@ -107,6 +109,7 @@ export type Database = {
           id?: number
           semester_id?: number
           subject_name?: string | null
+          views?: number | null
           year?: number
         }
         Relationships: [
