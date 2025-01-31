@@ -147,7 +147,7 @@ export const Navbar = ({ onSearchResults }: NavbarProps) => {
             Dr. Sarvepalli Radhakrishnan Learning Resources Centre
           </h2>
           <p className="text-base font-medium text-accent">
-            Question Paper Repository
+            Question Papers Repository
           </p>
         </div>
 
