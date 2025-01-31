@@ -165,6 +165,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      increment_views: {
+        Args: {
+          paper_id: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

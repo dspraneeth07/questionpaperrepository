@@ -70,7 +70,7 @@ const Index = () => {
     }
   };
 
-  const handleView = (fileUrl: string) => {
+  const handleView = async (paperId: number, fileUrl: string) => {
     if (isMobile) {
       toast({
         title: "Mobile Preview Disabled",
@@ -79,9 +79,42 @@ const Index = () => {
       });
       return;
     }
-    const viewUrl = convertToViewableURL(fileUrl);
-    setSelectedPaper(viewUrl);
-    setIsDialogOpen(true);
+
+    try {
+      // Increment view count
+      const { error } = await supabase.rpc('increment_views', { 
+        paper_id: paperId 
+      });
+
+      if (error) {
+        console.error('Error updating view count:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update view count",
+          variant: "destructive",
+        });
+      }
+
+      // Update the search results with new view count
+      setSearchResults(prevResults => 
+        prevResults.map(paper => 
+          paper.id === paperId 
+            ? { ...paper, views: (paper.views || 0) + 1 }
+            : paper
+        )
+      );
+
+      const viewUrl = convertToViewableURL(fileUrl);
+      setSelectedPaper(viewUrl);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error('Error handling view:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process view",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownload = async (paperId: number, fileUrl: string) => {
@@ -99,6 +132,15 @@ const Index = () => {
           variant: "destructive",
         });
       }
+
+      // Update the search results with new download count
+      setSearchResults(prevResults => 
+        prevResults.map(paper => 
+          paper.id === paperId 
+            ? { ...paper, downloads: (paper.downloads || 0) + 1 }
+            : paper
+        )
+      );
 
       // Open download link
       window.open(fileUrl, '_blank');
@@ -172,7 +214,7 @@ const Index = () => {
                           <div className="flex items-center gap-2">
                             {!isMobile && (
                               <button
-                                onClick={() => handleView(paper.file_url)}
+                                onClick={() => handleView(paper.id, paper.file_url)}
                                 className="text-primary hover:text-primary/80 transition-colors"
                                 title="View Paper"
                               >
