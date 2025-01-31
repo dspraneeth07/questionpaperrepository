@@ -1,20 +1,22 @@
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Building2, ChevronRight, ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
 
 const CSEBranches = () => {
+  const navigate = useNavigate();
   const { data: branches, isLoading } = useQuery({
     queryKey: ['cse-branches'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches')
         .select('*')
-        .in('code', ['CSE', 'CSE-AIML']) // Using .in() to match both branch codes
+        .in('code', ['CSE', 'CSE-AIML'])
         .order('name');
       
       if (error) {
@@ -29,12 +31,22 @@ const CSEBranches = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="container mx-auto px-4 py-8 flex-grow">
-        <Breadcrumb
-          items={[
-            { label: "Home", path: "/" },
-            { label: "Computer Science Branches", path: "/cse-branches" },
-          ]}
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Breadcrumb
+            items={[
+              { label: "Home", path: "/" },
+              { label: "Computer Science Branches", path: "/cse-branches" },
+            ]}
+          />
+        </div>
 
         <h2 className="text-2xl font-bold text-primary mb-6">Select Branch</h2>
         

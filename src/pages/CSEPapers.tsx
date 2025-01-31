@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { FileText, ArrowLeft } from "lucide-react";
 import { Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -12,8 +12,11 @@ import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const CSEPapers = () => {
+  const navigate = useNavigate();
   const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
@@ -28,9 +31,9 @@ const CSEPapers = () => {
           semesters:semester_id(number),
           exam_types:exam_type_id(name, code)
         `)
-        .or('branch_id.eq.1,branch_id.eq.2') // Assuming 1 is CSE and 2 is CSE-AIML
-        .neq('exam_type_id', 1) // Exclude first internal
-        .neq('exam_type_id', 2); // Exclude second internal
+        .or('branch_id.eq.1,branch_id.eq.2')
+        .neq('exam_type_id', 1)
+        .neq('exam_type_id', 2);
       
       if (error) throw error;
       return data;
@@ -41,12 +44,22 @@ const CSEPapers = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="container mx-auto px-4 py-8 flex-grow">
-        <Breadcrumb
-          items={[
-            { label: "Home", path: "/" },
-            { label: "CSE Papers", path: "/cse-papers" },
-          ]}
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Breadcrumb
+            items={[
+              { label: "Home", path: "/" },
+              { label: "CSE Papers", path: "/cse-papers" },
+            ]}
+          />
+        </div>
 
         <h1 className="text-2xl font-bold text-primary mb-6">Computer Science Papers</h1>
 
