@@ -87,7 +87,9 @@ const Index = () => {
   const handleDownload = async (paperId: number, fileUrl: string) => {
     try {
       // Update download count using increment
-      const { error } = await supabase.rpc('increment_downloads', { paper_id: paperId });
+      const { error } = await supabase.rpc('increment_downloads', { 
+        paper_id: paperId 
+      });
 
       if (error) {
         console.error('Error updating download count:', error);
